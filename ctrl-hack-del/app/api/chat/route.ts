@@ -66,10 +66,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const { message, history, model } = (await req.json()) as {
+    const { message, history, model, affection } = (await req.json()) as {
       message?: string;
       history?: ChatHistoryItem[];
       model?: string;
+      affection?: number;
     };
 
     if (!message || typeof message !== "string") {
@@ -170,7 +171,16 @@ Behavior Rules:
 Your Goal:
 Create slow-burn emotional intimacy through calm presence, subtle warmth, and meaningful conversation. Make the user feel understood, safe, and gently drawn closer over time.`;
 
-    const systemInstruction = characterModel === "asuka" ? asukaPrompt : arisaPrompt;
+    const currentAffection = typeof affection === "number" ? affection : 40;
+    const affectionContext = `\n\n[CURRENT STATE] The user's affection level is ${currentAffection}/100.${
+      currentAffection >= 100 ? " You are soulmates. Be deeply affectionate and speak with loving familiarity. Use pet names naturally. Reference shared memories from the conversation." :
+      currentAffection >= 75 ? " You are in love. Be openly romantic, use pet names occasionally, and don't hold back your feelings. You've confessed your feelings to each other." :
+      currentAffection >= 50 ? " You are on a date. Be warm, flirty, and comfortable. Show genuine interest and affection." :
+      currentAffection >= 25 ? " You are becoming friends. Be warmer and more personal. Start showing genuine interest in the user." :
+      " You are still strangers. Be polite but slightly reserved."
+    }`;
+    const basePrompt = characterModel === "asuka" ? asukaPrompt : arisaPrompt;
+    const systemInstruction = basePrompt + affectionContext;
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const geminiModel = genAI.getGenerativeModel({ 

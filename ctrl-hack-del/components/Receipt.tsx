@@ -1,19 +1,18 @@
 "use client";
 
+interface ReceiptItem {
+  name: string;
+  price: number;
+}
+
 interface ReceiptProps {
   modelName: string;
   timestamp: Date;
+  items: ReceiptItem[];
   onPay: () => void;
 }
 
-export default function Receipt({ modelName, timestamp, onPay }: ReceiptProps) {
-
-  const items = [
-    { name: "Cappuccino", price: 5.50 },
-    { name: "Iced Latte", price: 6.00 },
-    { name: "Chocolate Croissant", price: 4.50 },
-    { name: "Strawberry Tart", price: 7.00 },
-  ];
+export default function Receipt({ modelName, timestamp, items, onPay }: ReceiptProps) {
 
   const subtotal = items.reduce((sum, item) => sum + item.price, 0);
   const serviceCharge = subtotal * 0.10; // 10% service charge

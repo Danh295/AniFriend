@@ -1,8 +1,8 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Send, Mic, Cpu, Volume2, VolumeX, Heart, ArrowLeft } from "lucide-react";
+import { Send, Mic, Volume2, VolumeX, Heart, ArrowLeft } from "lucide-react";
 import Receipt from "@/components/Receipt";
 
 // Import Canvas with NO SSR
@@ -14,6 +14,66 @@ interface Message {
   role: 'user' | 'ai';
   text: string;
   emotion?: string;
+}
+
+interface MenuItem {
+  name: string;
+  price: number;
+  image: string;
+  category: string;
+  description: string;
+}
+
+const MENU_ITEMS: MenuItem[] = [
+  // Coffee
+  { name: "Cappuccino", price: 7, image: "/menu/coffee.png", category: "Coffee", description: "Rich espresso topped with velvety steamed milk foam" },
+  { name: "Latte", price: 8, image: "/menu/latte.png", category: "Coffee", description: "Smooth espresso blended with creamy steamed milk" },
+  { name: "Black Coffee", price: 4, image: "/menu/plain_latte.png", category: "Coffee", description: "A classic brew to warm the heart" },
+  // Tea
+  { name: "Tea", price: 4, image: "/menu/tea.png", category: "Tea", description: "Delicate loose-leaf tea, steeped to perfection" },
+  { name: "Matcha Latte", price: 7, image: "/menu/matcha_latte.png", category: "Tea", description: "Ceremonial-grade matcha whisked with frothy milk" },
+  // Cakes
+  { name: "Strawberry Shortcake", price: 15, image: "/menu/shortcake.png", category: "Cakes", description: "Fluffy sponge layered with fresh strawberries and cream" },
+  { name: "Blueberry Shortcake", price: 16, image: "/menu/blueberry_cake.png", category: "Cakes", description: "Bursting with juicy blueberries in every bite" },
+  { name: "Chocolate Cake", price: 15, image: "/menu/chocolate_cake.png", category: "Cakes", description: "Decadent dark chocolate ganache for two" },
+  { name: "Valentine's Special Cake", price: 18, image: "/menu/valentines_cake.png", category: "Cakes", description: "A special cake made just for two" },
+  { name: "Matcha Cake", price: 16, image: "/menu/matcha_cake.png", category: "Cakes", description: "Earthy matcha sponge with white chocolate frosting" },
+  // Pastry
+  { name: "Macarons (4)", price: 12, image: "/menu/macarons.png", category: "Pastry", description: "Assorted French macarons, crisp shells with soft filling" },
+  { name: "Crepes", price: 10, image: "/menu/crepe.png", category: "Pastry", description: "Thin French crepes drizzled with honey and berries" },
+  // Smoothies
+  { name: "Strawberry Smoothie", price: 12, image: "/menu/strawberry_smoothie.png", category: "Smoothies", description: "Fresh strawberries blended into a sweet pink dream" },
+  { name: "Chocolate Smoothie", price: 12, image: "/menu/chocolate_smoothie.png", category: "Smoothies", description: "Indulgent chocolate blended smooth and creamy" },
+  { name: "Mango Smoothie", price: 14, image: "/menu/mango_smoothie.png", category: "Smoothies", description: "Tropical mango puree, sunshine in a glass" },
+  // Alcohol
+  { name: "Whiskey", price: 15, image: "/menu/whiskey.png", category: "Alcohol", description: "Aged single malt, neat — for a bold date night" },
+];
+
+const MENU_CATEGORIES = ["Coffee", "Tea", "Cakes", "Pastry", "Smoothies", "Alcohol"];
+
+const DRINK_CATEGORIES = ["Coffee", "Tea", "Smoothies", "Alcohol"];
+const FOOD_CATEGORIES = ["Cakes", "Pastry"];
+
+interface Milestone {
+  threshold: number;
+  label: string;
+  icon: string;
+  description: string;
+}
+
+const MILESTONES: Milestone[] = [
+  { threshold: 25, label: "Getting Closer", icon: "💕", description: "They're starting to open up to you..." },
+  { threshold: 50, label: "First Date", icon: "☕", description: "Cafe Date unlocked!" },
+  { threshold: 75, label: "Confession", icon: "💝", description: "Something special is about to happen..." },
+  { threshold: 100, label: "Soulmates", icon: "💖", description: "You've reached the deepest bond." },
+];
+
+function getRelationshipStage(affection: number) {
+  if (affection >= 100) return { name: "Soulmates", tier: 4 };
+  if (affection >= 75) return { name: "In Love", tier: 3 };
+  if (affection >= 50) return { name: "Dating", tier: 2 };
+  if (affection >= 25) return { name: "Friends", tier: 1 };
+  return { name: "Strangers", tier: 0 };
 }
 
 export default function Home() {
@@ -64,6 +124,123 @@ export default function Home() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
+  // Milestone & relationship state
+  const [shownMilestones, setShownMilestones] = useState<number[]>([]);
+  const [activeMilestone, setActiveMilestone] = useState<Milestone | null>(null);
+  const [holdingHands, setHoldingHands] = useState(false);
+  const stage = getRelationshipStage(affection);
+
+  // Menu system state
+  const [currency, setCurrency] = useState(50);
+  const [orderedItems, setOrderedItems] = useState<string[]>([]);
+  const [showMenu, setShowMenu] = useState(false);
+  const [menuTab, setMenuTab] = useState("Coffee");
+
+  // Memoize heart positions so they don't jump on re-render
+  const heartStyles = useMemo(() =>
+    Array.from({ length: 12 }).map(() => ({
+      left: `${Math.random() * 100}%`,
+      animationDelay: `${Math.random() * 6}s`,
+      animationDuration: `${6 + Math.random() * 4}s`,
+      fontSize: `${1 + Math.random() * 1.2}rem`,
+    })),
+  []);
+
+  const sendChatMessage = async (messageText: string) => {
+    const userMsg: Message = { role: "user", text: messageText };
+    setChatHistory((prev) => [...prev, userMsg]);
+    setIsThinking(true);
+
+    try {
+      const historyForApi = chatHistory.map((msg) => ({
+        role: msg.role === "user" ? "user" : "model",
+        content: msg.text,
+      }));
+
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: messageText, history: historyForApi, model: modelName, affection }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to fetch response");
+      }
+
+      const replyText = data?.reply || "(No response)";
+      const expression = data?.expression || "Normal";
+      const audioBase64 = data?.audio;
+
+      setChatHistory((prev) => [...prev, { role: "ai", text: replyText, emotion: expression }]);
+      setCurrentEmotion(expression);
+
+      const multiplier = EMOTION_MULTIPLIERS[expression] ?? 0;
+      if (multiplier !== 0) {
+        const handsBonus = holdingHands ? 1.5 : 1;
+        const change = AFFECTION_BASE_CHANGE * multiplier * handsBonus;
+        setAffection((prev) => Math.max(0, Math.min(100, prev + change)));
+      }
+
+      if (audioBase64 && isAudioEnabled) {
+        playAudio(audioBase64);
+      }
+    } catch (error) {
+      console.error(error);
+      setChatHistory((prev) => [
+        ...prev,
+        { role: "ai", text: "⚠️ Gemini is unavailable. Check your API key and try again." },
+      ]);
+      setCurrentEmotion("Normal");
+    } finally {
+      setIsThinking(false);
+    }
+  };
+
+  const orderTotal = orderedItems.reduce((sum, name) => {
+    const item = MENU_ITEMS.find((m) => m.name === name);
+    return sum + (item?.price ?? 0);
+  }, 0);
+  const availableBalance = currency - orderTotal;
+
+  // Current drink/food on the table
+  const currentDrink = orderedItems.find((name) => {
+    const m = MENU_ITEMS.find((i) => i.name === name);
+    return m && DRINK_CATEGORIES.includes(m.category);
+  });
+  const currentFood = orderedItems.find((name) => {
+    const m = MENU_ITEMS.find((i) => i.name === name);
+    return m && FOOD_CATEGORIES.includes(m.category);
+  });
+
+  const getEffectiveCost = (item: MenuItem) => {
+    const isDrink = DRINK_CATEGORIES.includes(item.category);
+    const replacedName = isDrink ? currentDrink : currentFood;
+    const replacedPrice = replacedName
+      ? (MENU_ITEMS.find((m) => m.name === replacedName)?.price ?? 0)
+      : 0;
+    return item.price - replacedPrice;
+  };
+
+  const handlePurchase = (item: MenuItem) => {
+    if (orderedItems.includes(item.name)) return;
+    const effectiveCost = getEffectiveCost(item);
+    if (availableBalance < effectiveCost) return;
+
+    const isDrink = DRINK_CATEGORIES.includes(item.category);
+    setOrderedItems((prev) => {
+      const filtered = prev.filter((name) => {
+        const existing = MENU_ITEMS.find((m) => m.name === name);
+        if (!existing) return true;
+        return isDrink
+          ? !DRINK_CATEGORIES.includes(existing.category)
+          : !FOOD_CATEGORIES.includes(existing.category);
+      });
+      return [...filtered, item.name];
+    });
+    sendChatMessage(`I just ordered ${item.name} for us!`);
+  };
+
   // Initial loading screen
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 1500);
@@ -77,6 +254,26 @@ export default function Home() {
     const timer = setTimeout(() => setIsLoading(false), 1500);
     return () => clearTimeout(timer);
   }, [isCafeDate]);
+
+  // Milestone detection
+  useEffect(() => {
+    for (const milestone of MILESTONES) {
+      if (affection >= milestone.threshold && !shownMilestones.includes(milestone.threshold)) {
+        setShownMilestones((prev) => [...prev, milestone.threshold]);
+        setActiveMilestone(milestone);
+        // Auto-dismiss after 4 seconds
+        const timer = setTimeout(() => setActiveMilestone(null), 4000);
+        // Trigger confession at 75
+        if (milestone.threshold === 75) {
+          const confessionName = modelName === "arisa" ? "Arisa" : "Asuka";
+          setTimeout(() => {
+            sendChatMessage(`[${confessionName} looks at you with a tender expression]`);
+          }, 1500);
+        }
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [affection]);
 
   // Detect time of day
   useEffect(() => {
@@ -216,67 +413,9 @@ export default function Home() {
 
   const handleSend = async () => {
     if (!input.trim() || isThinking) return;
-
-    const userMsg: Message = { role: "user", text: input };
     const userInput = input;
-    setChatHistory((prev) => [...prev, userMsg]);
     setInput("");
-    setIsThinking(true);
-
-    try {
-      const historyForApi = chatHistory.map((msg) => ({
-        role: msg.role === "user" ? "user" : "model",
-        content: msg.text,
-      }));
-
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userInput, history: historyForApi, model: modelName }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to fetch response");
-      }
-
-      const replyText = data?.reply || "(No response)";
-      const expression = data?.expression || "Normal";
-      const audioBase64 = data?.audio;
-      
-      console.log("📝 Response received:", { 
-        hasText: !!replyText, 
-        hasAudio: !!audioBase64,
-        audioEnabled: isAudioEnabled 
-      });
-      
-      setChatHistory((prev) => [...prev, { role: "ai", text: replyText, emotion: expression }]);
-      setCurrentEmotion(expression);
-      
-      // Update affection based on emotion
-      const multiplier = EMOTION_MULTIPLIERS[expression] ?? 0;
-      if (multiplier !== 0) {
-        const change = AFFECTION_BASE_CHANGE * multiplier;
-        setAffection((prev) => Math.max(0, Math.min(100, prev + change)));
-      }
-      
-      // Play audio if available and enabled
-      if (audioBase64 && isAudioEnabled) {
-        console.log("🎵 Audio data received, attempting playback...");
-        playAudio(audioBase64);
-      } else if (!audioBase64) {
-        console.warn("⚠️ No audio data in response. Check if ELEVENLABS_API_KEY is set in .env.local");
-      }
-    } catch (error) {
-      console.error(error);
-      setChatHistory((prev) => [
-        ...prev,
-        { role: "ai", text: "⚠️ Gemini is unavailable. Check your API key and try again." },
-      ]);
-      setCurrentEmotion("Normal");
-    } finally {
-      setIsThinking(false);
-    }
+    await sendChatMessage(userInput);
   };
 
   return (
@@ -289,9 +428,17 @@ export default function Home() {
       )}
       
       {/* Back Button */}
-      <button className="chat-back-button" onClick={() => router.push("/")}>
+      <button className="chat-back-button" onClick={() => {
+        if (isCafeDate) {
+          setReceiptTimestamp(new Date());
+          setShowReceipt(true);
+        } else {
+          router.push("/");
+        }
+      }}>
         <ArrowLeft size={16} />
       </button>
+
 
       {/* LEFT COLUMN: ARISA MODEL WITH PARALLAX (65% Width) */}
       <section className="model-section">
@@ -345,12 +492,27 @@ export default function Home() {
             </div>
             
             {/* Table Layer - In front of model */}
-            <div 
+            <div
               className="parallax-layer table-layer"
               style={{
                 transform: `translateX(${mousePos.x * 4}px)`
               }}
             />
+
+            {/* Ordered items on table */}
+            {orderedItems.length > 0 && (
+              <div className="table-items" style={{ transform: `translateX(${mousePos.x * 4}px)` }}>
+                {orderedItems.map((name, i) => {
+                  const item = MENU_ITEMS.find((m) => m.name === name);
+                  if (!item) return null;
+                  return (
+                    <div key={name} className={`table-item ${item.category === "Cakes" ? "table-item-cake" : ""}`} style={{ animationDelay: `${i * 0.1}s` }}>
+                      <img src={item.image} alt={item.name} />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </>
         )}
       </section>
@@ -361,14 +523,26 @@ export default function Home() {
           <Heart size={14} fill="var(--soft-berry)" color="var(--soft-berry)" />
           <span>lvl</span>
         </div>
-        <div className="affection-meter-bar">
-          <div 
-            className="affection-meter-fill"
-            style={{ height: `${affection}%` }}
-          >
-            <div className="affection-meter-shine" />
+        <div className="meter-bar-wrapper">
+          <div className="affection-meter-bar">
+            <div
+              className={`affection-meter-fill stage-${stage.tier}`}
+              style={{ height: `${affection}%` }}
+            >
+              <div className="affection-meter-shine" />
+            </div>
           </div>
+          {/* Milestone tick marks */}
+          {MILESTONES.map((m) => (
+            <div
+              key={m.threshold}
+              className={`meter-tick ${affection >= m.threshold ? "reached" : ""}`}
+              style={{ bottom: `${m.threshold}%` }}
+              title={m.label}
+            />
+          ))}
         </div>
+        <span className="stage-label">{stage.name}</span>
       </div>
 
       {/* RIGHT COLUMN: CHAT INTERFACE (35% Width) */}
@@ -376,34 +550,55 @@ export default function Home() {
         
         {/* Header */}
         <div className="chat-header">
-          <div className="chat-header-content">
-            <div className="status-indicator" />
-            <h1 className="chat-title">
-              {modelName === "arisa" ? "Arisa (your girlfriend)" : "Asuka (your boyfriend)"}
-            </h1>
+          <div className="chat-header-top">
+            <div className="chat-header-content">
+              <div className="status-indicator" />
+              <h1 className="chat-title">
+                {modelName === "arisa" ? "Arisa (your girlfriend)" : "Asuka (your boyfriend)"}
+              </h1>
+            </div>
+            <div className="header-currency">${currency}</div>
           </div>
-          <button 
-            className={`cafe-date-btn ${affection < CAFE_DATE_THRESHOLD && !isCafeDate ? 'disabled' : ''}`}
-            onClick={() => {
-              if (isCafeDate) {
-                setReceiptTimestamp(new Date());
-                setShowReceipt(true);
-              } else if (affection >= CAFE_DATE_THRESHOLD) {
-                setIsCafeDate(true);
-              }
-            }}
-            title={affection < CAFE_DATE_THRESHOLD && !isCafeDate ? `Affection must be ${CAFE_DATE_THRESHOLD}+ to unlock` : ''}
-          >
-            {isCafeDate ? 'Back Home' : affection >= CAFE_DATE_THRESHOLD ? 'Cafe Date' : `🔒 ${CAFE_DATE_THRESHOLD}%`}
-          </button>
-          <button 
-            className="audio-toggle-btn"
-            onClick={() => setIsAudioEnabled(!isAudioEnabled)}
-            title={isAudioEnabled ? 'Disable voice' : 'Enable voice'}
-          >
-            {isAudioEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
-          </button>
-          <Cpu size={16} className="header-icon" />
+          <div className="chat-header-actions">
+            <button
+              className={`header-action-btn ${affection < CAFE_DATE_THRESHOLD && !isCafeDate ? 'locked' : ''}`}
+              onClick={() => {
+                if (isCafeDate) {
+                  setReceiptTimestamp(new Date());
+                  setShowReceipt(true);
+                } else if (affection >= CAFE_DATE_THRESHOLD) {
+                  setIsCafeDate(true);
+                }
+              }}
+              title={affection < CAFE_DATE_THRESHOLD && !isCafeDate ? `Affection must be ${CAFE_DATE_THRESHOLD}+ to unlock` : ''}
+            >
+              {isCafeDate ? 'Back Home' : affection >= CAFE_DATE_THRESHOLD ? 'Cafe Date' : `🔒 ${CAFE_DATE_THRESHOLD}%`}
+            </button>
+            {isCafeDate && (
+              <button
+                className="header-action-btn"
+                onClick={() => setShowMenu(true)}
+              >
+                Menu
+              </button>
+            )}
+            {affection >= 75 && (
+              <button
+                className={`header-action-btn ${holdingHands ? "active-hands" : ""}`}
+                onClick={() => setHoldingHands(!holdingHands)}
+                title={holdingHands ? "Let go" : "Hold hands (1.5x affection boost)"}
+              >
+                {holdingHands ? "🤝 Holding Hands" : "🫱 Hold Hands"}
+              </button>
+            )}
+            <button
+              className="header-action-btn icon-btn"
+              onClick={() => setIsAudioEnabled(!isAudioEnabled)}
+              title={isAudioEnabled ? 'Disable voice' : 'Enable voice'}
+            >
+              {isAudioEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+            </button>
+          </div>
         </div>
 
         {/* Chat Area */}
@@ -470,14 +665,103 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Milestone Popup */}
+      {activeMilestone && (
+        <div className="milestone-popup" onClick={() => setActiveMilestone(null)}>
+          <span className="milestone-icon">{activeMilestone.icon}</span>
+          <span className="milestone-label">{activeMilestone.label}</span>
+          <span className="milestone-desc">{activeMilestone.description}</span>
+        </div>
+      )}
+
+      {/* Soulmates Hearts */}
+      {affection >= 100 && (
+        <div className="soulmates-hearts">
+          {heartStyles.map((style, i) => (
+            <span key={i} className="soulmate-heart" style={style}>💖</span>
+          ))}
+        </div>
+      )}
+
+      {/* Menu Modal */}
+      {showMenu && (
+        <div className="menu-overlay" onClick={() => setShowMenu(false)}>
+          <div className="menu-panel" onClick={(e) => e.stopPropagation()}>
+            {/* Banner header */}
+            <div className="menu-banner">
+              <img src="/menu/menupage.png" alt="Our Menu" />
+              <button className="menu-close" onClick={() => setShowMenu(false)}>✕</button>
+            </div>
+
+            {/* Currency display */}
+            <div className="menu-currency">
+              <span className="menu-currency-label">Available to spend</span>
+              <span className="menu-currency-value">${availableBalance}</span>
+            </div>
+
+            {/* Tab navigation */}
+            <div className="menu-tabs">
+              {MENU_CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  className={`menu-tab ${menuTab === cat ? "active" : ""}`}
+                  onClick={() => setMenuTab(cat)}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            {/* Item grid */}
+            <div className="menu-items">
+              {MENU_ITEMS.filter((item) => item.category === menuTab).map((item) => {
+                const isOrdered = orderedItems.includes(item.name);
+                const canAfford = availableBalance >= getEffectiveCost(item);
+                return (
+                  <div
+                    key={item.name}
+                    className={`menu-item-card ${isOrdered ? "ordered" : ""} ${!canAfford && !isOrdered ? "cant-afford" : ""}`}
+                  >
+                    {isOrdered && <span className="on-table-badge">On table</span>}
+                    <div className="menu-item-image">
+                      <img src={item.image} alt={item.name} />
+                    </div>
+                    <div className="menu-item-info">
+                      <span className="menu-item-name">{item.name}</span>
+                      <span className="menu-item-desc">{item.description}</span>
+                      <span className="menu-item-price">${item.price}</span>
+                    </div>
+                    {!isOrdered && (
+                      <button
+                        className={`order-btn ${!canAfford ? "disabled" : ""}`}
+                        onClick={() => handlePurchase(item)}
+                        disabled={!canAfford}
+                      >
+                        {canAfford ? "Order" : "Not enough $"}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Receipt Modal */}
       {showReceipt && (
-        <Receipt 
+        <Receipt
           modelName={modelName}
           timestamp={receiptTimestamp}
+          items={orderedItems.map((name) => {
+            const item = MENU_ITEMS.find((m) => m.name === name);
+            return { name, price: item?.price ?? 0 };
+          })}
           onPay={() => {
+            setCurrency((prev) => prev - orderTotal);
             setShowReceipt(false);
             setIsCafeDate(false);
+            setOrderedItems([]);
           }}
         />
       )}
