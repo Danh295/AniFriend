@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { Send, Mic, Cpu } from "lucide-react";
+import { Send, Mic, Cpu, Volume2, VolumeX } from "lucide-react";
 
 // Import Canvas with NO SSR
 const ModelCanvas = dynamic(() => import("@/components/ModelCanvas"), {
@@ -17,95 +17,291 @@ interface Message {
 export default function Home() {
   const [input, setInput] = useState("");
   const [chatHistory, setChatHistory] = useState<Message[]>([]);
-  const [currentEmotion, setCurrentEmotion] = useState("Neutral");
+  const [currentEmotion, setCurrentEmotion] = useState("Normal");
+  const [isThinking, setIsThinking] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [timeOfDay, setTimeOfDay] = useState("afternoon");
+  const [isCafeDate, setIsCafeDate] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Initial loading screen
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Loading screen when switching backgrounds
+  useEffect(() => {
+    if (isLoading) return; // Skip on initial load
+    setIsLoading(true);
+    const timer = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, [isCafeDate]);
+
+  // Detect time of day
+  useEffect(() => {
+    const updateTimeOfDay = () => {
+      const hour = new Date().getHours();
+      
+      if (hour >= 5 && hour < 12) {
+        setTimeOfDay("morning");
+      } else if (hour >= 12 && hour < 17) {
+        setTimeOfDay("afternoon");
+      } else if (hour >= 17 && hour < 20) {
+        setTimeOfDay("evening");
+      } else {
+        setTimeOfDay("night");
+      }
+    };
+
+    updateTimeOfDay();
+    // Update every minute
+    const interval = setInterval(updateTimeOfDay, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const x = (e.clientX / window.innerWidth - 0.5) * 2;
+      const y = (e.clientY / window.innerHeight - 0.5) * 2;
+      setMousePos({ x, y });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  const playAudio = (base64Audio: string) => {
+    try {
+      console.log("🔊 Attempting to play audio...");
+      
+      // Stop current audio if playing
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+
+      // Create new audio element
+      const audio = new Audio(`data:audio/mpeg;base64,${base64Audio}`);
+      audio.volume = 1.0; // Set to maximum volume
+      audioRef.current = audio;
+      
+      audio.addEventListener('loadeddata', () => {
+        console.log("✅ Audio loaded successfully");
+      });
+      
+      audio.addEventListener('playing', () => {
+        console.log("▶️ Audio is playing");
+      });
+      
+      audio.play().catch(err => {
+        console.error("❌ Audio playback failed:", err);
+        alert("Audio playback failed. Please click anywhere on the page first to enable audio.");
+      });
+    } catch (error) {
+      console.error("❌ Audio creation failed:", error);
+    }
+  };
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || isThinking) return;
 
-    // 1. Add User Message
     const userMsg: Message = { role: "user", text: input };
-    setChatHistory((prev) => [...prev, userMsg]);
     const userInput = input;
+    setChatHistory((prev) => [...prev, userMsg]);
     setInput("");
+    setIsThinking(true);
 
-    // 2. Simulate AI Response (DELETE THIS LATER)
-    setTimeout(() => {
-      const responses = [
-        { text: "Are you ignored me? Rude.", emotion: "Angry" },
-        { text: "Omg stop, you're making me blush!", emotion: "Shy" },
-        { text: "I am literally a computer program.", emotion: "Neutral" },
-      ];
-      const reply = responses[Math.floor(Math.random() * responses.length)];
+    try {
+      const historyForApi = chatHistory.map((msg) => ({
+        role: msg.role === "user" ? "user" : "model",
+        content: msg.text,
+      }));
+
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userInput, history: historyForApi }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to fetch response");
+      }
+
+      const replyText = data?.reply || "(No response)";
+      const expression = data?.expression || "Normal";
+      const audioBase64 = data?.audio;
       
-      setChatHistory(prev => [...prev, { role: "ai", ...reply }]);
-      setCurrentEmotion(reply.emotion);
-    }, 1000);
+      console.log("📝 Response received:", { 
+        hasText: !!replyText, 
+        hasAudio: !!audioBase64,
+        audioEnabled: isAudioEnabled 
+      });
+      
+      setChatHistory((prev) => [...prev, { role: "ai", text: replyText, emotion: expression }]);
+      setCurrentEmotion(expression);
+      
+      // Play audio if available and enabled
+      if (audioBase64 && isAudioEnabled) {
+        console.log("🎵 Audio data received, attempting playback...");
+        playAudio(audioBase64);
+      } else if (!audioBase64) {
+        console.warn("⚠️ No audio data in response. Check if ELEVENLABS_API_KEY is set in .env.local");
+      }
+    } catch (error) {
+      console.error(error);
+      setChatHistory((prev) => [
+        ...prev,
+        { role: "ai", text: "⚠️ Gemini is unavailable. Check your API key and try again." },
+      ]);
+      setCurrentEmotion("Normal");
+    } finally {
+      setIsThinking(false);
+    }
   };
 
   return (
-    <main className="flex w-screen h-screen bg-gray-950 overflow-hidden text-white">
+    <main className="chat-container">
+      {/* Loading Screen */}
+      {isLoading && (
+        <div className="loading-screen">
+          <p className="loading-text">loading simulation</p>
+        </div>
+      )}
       
-      {/* LEFT COLUMN: CHAT INTERFACE (35% Width) */}
-      <section className="w-[35%] min-w-[350px] flex flex-col border-r border-white/10 bg-black/40 backdrop-blur-sm z-10">
+      {/* LEFT COLUMN: ARISA MODEL WITH PARALLAX (65% Width) */}
+      <section className="model-section">
+        {!isCafeDate ? (
+          <>
+            {/* BACKGROUND 1: Outdoor Scene */}
+            {/* Sky Layer - Deepest */}
+            <div 
+              className={`parallax-layer sky-layer sky-${timeOfDay}`}
+            />
+            
+            {/* House Layer */}
+            <div 
+              className="parallax-layer house-layer"
+            />
+            
+            {/* Bush Layer */}
+            <div 
+              className="parallax-layer bush-layer"
+              style={{
+                transform: `translateX(${mousePos.x * 8}px)`
+              }}
+            />
+            
+            {/* The Model - Above all layers */}
+            <div className="model-wrapper" style={{
+              transform: `translateX(${mousePos.x * 20}px)`
+            }}>
+              <ModelCanvas emotion={currentEmotion} />
+            </div>
+          </>
+        ) : (
+          <>
+            {/* BACKGROUND 2: Cafe Scene */}
+            {/* Cafe Background - Static at the very back */}
+            <div className="parallax-layer cafe-background" />
+            
+            {/* Chair Layer - Behind model */}
+            <div 
+              className="parallax-layer chair-layer"
+              style={{
+                transform: `translateX(${mousePos.x * 10}px)`
+              }}
+            />
+            
+            {/* The Model - Smaller size for cafe */}
+            <div className="model-wrapper cafe-model" style={{
+              transform: `translateX(${mousePos.x * 15}px)`
+            }}>
+              <ModelCanvas emotion={currentEmotion} />
+            </div>
+            
+            {/* Table Layer - In front of model */}
+            <div 
+              className="parallax-layer table-layer"
+              style={{
+                transform: `translateX(${mousePos.x * 4}px)`
+              }}
+            />
+          </>
+        )}
+      </section>
+
+      {/* RIGHT COLUMN: CHAT INTERFACE (35% Width) */}
+      <section className="chat-section">
         
         {/* Header */}
-        <div className="p-4 border-b border-white/10 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_#22c55e]" />
-            <h1 className="font-mono text-sm tracking-widest text-green-400">ARISA_OS v1.0</h1>
+        <div className="chat-header">
+          <div className="chat-header-content">
+            <div className="status-indicator" />
+            <h1 className="chat-title">Arisa (your girlfriend)</h1>
           </div>
-          <Cpu size={16} className="text-white/20" />
+          <button 
+            className="cafe-date-btn"
+            onClick={() => setIsCafeDate(!isCafeDate)}
+          >
+            {isCafeDate ? 'Back Home' : 'Cafe Date'}
+          </button>
+          <button 
+            className="audio-toggle-btn"
+            onClick={() => setIsAudioEnabled(!isAudioEnabled)}
+            title={isAudioEnabled ? 'Disable voice' : 'Enable voice'}
+          >
+            {isAudioEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+          </button>
+          <Cpu size={16} className="header-icon" />
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10">
+        <div className="chat-messages">
           {chatHistory.length === 0 && (
-            <div className="h-full flex items-center justify-center text-white/20 text-sm font-mono text-center">
-              SYSTEM READY.<br/>AWAITING INPUT.
+            <div className="empty-chat">
+              <p>
+                Oh... um, hi there~ <br/>
+                I didn't think you'd show up today... <br/>
+              </p>
             </div>
           )}
           
           {chatHistory.map((msg, i) => (
-            <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[85%] p-3 rounded-xl text-sm leading-relaxed
-                ${msg.role === "user" 
-                  ? "bg-cyan-950/50 border border-cyan-500/20 text-cyan-100 rounded-br-none" 
-                  : "bg-pink-950/40 border border-pink-500/20 text-pink-100 rounded-bl-none"
-                }`}>
+            <div key={i} className={`message-wrapper ${msg.role}`}>
+              <div className={`message-bubble ${msg.role}`}>
                 {msg.text}
               </div>
             </div>
           ))}
+
+          {isThinking && (
+            <div className="message-wrapper ai">
+              <div className="message-bubble thinking">
+                ...
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Input Area */}
-        <div className="p-4 border-t border-white/10 bg-black/20">
-          <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg p-2 focus-within:ring-1 focus-within:ring-cyan-500/50 transition-all">
+        <div className="chat-input-area">
+          <div className="input-wrapper">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder="Command..."
-              className="flex-1 bg-transparent border-none outline-none text-sm px-2 font-mono placeholder-white/20"
+              className="chat-input"
             />
-            <button onClick={handleSend} className="p-2 hover:bg-white/10 rounded-md transition-colors text-cyan-400">
+            <button onClick={handleSend} disabled={!input.trim() || isThinking} className="send-button">
               <Send size={16} />
             </button>
           </div>
-        </div>
-      </section>
-
-      {/* RIGHT COLUMN: WAIFU RENDER (65% Width) */}
-      <section className="flex-1 relative bg-gradient-to-br from-gray-900 via-gray-900 to-black">
-        {/* Grid Pattern Overlay */}
-        <div className="absolute inset-0 opacity-10" 
-             style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '20px 20px' }} 
-        />
-        
-        {/* The Model */}
-        <div className="absolute inset-0">
-          <ModelCanvas emotion={currentEmotion} />
         </div>
       </section>
 
