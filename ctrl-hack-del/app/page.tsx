@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { Send, Mic, Cpu } from "lucide-react";
 
@@ -19,6 +19,18 @@ export default function Home() {
   const [chatHistory, setChatHistory] = useState<Message[]>([]);
   const [currentEmotion, setCurrentEmotion] = useState("Normal");
   const [isThinking, setIsThinking] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const x = (e.clientX / window.innerWidth - 0.5) * 2;
+      const y = (e.clientY / window.innerHeight - 0.5) * 2;
+      setMousePos({ x, y });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
 
   const handleSend = async () => {
     if (!input.trim() || isThinking) return;
@@ -65,13 +77,41 @@ export default function Home() {
   return (
     <main className="chat-container">
       
-      {/* LEFT COLUMN: ARISA MODEL (65% Width) */}
+      {/* LEFT COLUMN: ARISA MODEL WITH PARALLAX (65% Width) */}
       <section className="model-section">
-        {/* Grid Pattern Overlay */}
-        <div className="model-section-grid" />
+        {/* Sky Layer - Deepest */}
+        <div 
+          className="parallax-layer sky-layer"
+          style={{
+            transform: `translateX(${mousePos.x * 5}px)`
+          }}
+        />
         
-        {/* The Model */}
-        <div className="model-wrapper">
+        {/* Tree/Foliage Layer */}
+        <div 
+          className="parallax-layer tree-layer"
+          style={{
+            transform: `translateX(${mousePos.x * 6}px)`
+          }}
+        />
+        
+        {/* House Layer */}
+        <div 
+          className="parallax-layer house-layer"
+        />
+        
+        {/* Bush Layer */}
+        <div 
+          className="parallax-layer bush-layer"
+          style={{
+            transform: `translateX(${mousePos.x * 8}px)`
+          }}
+        />
+        
+        {/* The Model - Above all layers */}
+        <div className="model-wrapper" style={{
+          transform: `translateX(${mousePos.x * 20}px)`
+        }}>
           <ModelCanvas emotion={currentEmotion} />
         </div>
       </section>

@@ -45,9 +45,98 @@ body {
 .model-section {
   flex: 1;
   position: relative;
-  background: linear-gradient(to bottom right, var(--cream-rose), var(--pale-blush), #FFF5F8);
+  background: linear-gradient(to bottom, #FFE5E5, var(--cream-rose), var(--pale-blush));
   perspective: 1000px;
   overflow: hidden;
+}
+
+/* Parallax Layers */
+.parallax-layer {
+  position: absolute;
+  inset: 0;
+  transition: transform 0.3s ease-out;
+  pointer-events: none;
+}
+/* Sky Layer - Deepest background with warm sunset */
+.sky-layer {
+  background: linear-gradient(to bottom, 
+    #ffe5e5 0%, 
+    #fff0f3 30%,
+    #f9d6d8 60%,
+    #f4c9cc 100%
+  );
+  z-index: 1;
+}
+/* Tree Layer - Foliage in background */
+.tree-layer {
+  z-index: 5;
+  background-image: url('/tree.png'); /* Replace with actual tree PNG */
+  background-size: 70%;
+  background-repeat: no-repeat;
+  background-position: left -10% bottom -5%;
+}
+
+/* Fallback tree styling with CSS if no image */
+.tree-layer::before {
+  content: '';
+  position: absolute;
+  bottom: 0%;
+  left: -100px;
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, rgba(120, 160, 100, 0.3) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.tree-layer::after {
+  content: '';
+  position: absolute;
+  bottom: -5%;
+  left: 0px;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(100, 140, 80, 0.25) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+/* Bush Layer - Foreground foliage */
+.bush-layer {
+  z-index: 6;
+  background-image: url('/bush.png'); /* Replace with actual bush PNG */
+  background-size: 30%;
+  background-repeat: no-repeat;
+  background-position: right 10% bottom -5%;
+}
+
+/* Fallback bush styling with CSS if no image */
+.bush-layer::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 10%;
+  width: 200px;
+  height: 150px;
+  background: radial-gradient(ellipse at center, rgba(80, 120, 60, 0) 0%, rgba(100, 140, 80, 0.3) 50%, transparent 80%);
+  border-radius: 50% 50% 40% 40%;
+}
+
+.bush-layer::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 15%;
+  width: 150px;
+  height: 120px;
+  background: radial-gradient(ellipse at center, rgba(90, 130, 70, 0.35) 0%, rgba(110, 150, 90, 0.25) 50%, transparent 80%);
+  border-radius: 50% 50% 40% 40%;
+}
+
+/* House Layer - Background building structure */
+.house-layer {
+  z-index: 3;
+  background-image: url('/house.png'); /* Replace with actual house PNG */
+  background-size: cover;
+  background-position: center;
 }
 
 .model-section-grid {
@@ -61,6 +150,7 @@ body {
   transform: rotateX(60deg) translateZ(-200px);
   transform-origin: center center;
   animation: gridMove 20s linear infinite;
+  z-index: 0;
 }
 
 @keyframes gridMove {
@@ -75,6 +165,8 @@ body {
 .model-wrapper {
   position: absolute;
   inset: 0;
+  z-index: 10;
+  transition: transform 0.3s ease-out;
 }
 
 /* Chat Section */
