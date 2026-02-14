@@ -1,8 +1,9 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Send, Mic, Cpu, Volume2, VolumeX, Heart, ArrowLeft } from "lucide-react";
+import { Send, Mic, Volume2, VolumeX, Heart, ArrowLeft } from "lucide-react";
+import Receipt from "@/components/Receipt";
 
 // Import Canvas with NO SSR
 const ModelCanvas = dynamic(() => import("@/components/ModelCanvas"), {
@@ -50,6 +51,31 @@ const MENU_ITEMS: MenuItem[] = [
 
 const MENU_CATEGORIES = ["Coffee", "Tea", "Cakes", "Pastry", "Smoothies", "Alcohol"];
 
+const DRINK_CATEGORIES = ["Coffee", "Tea", "Smoothies", "Alcohol"];
+const FOOD_CATEGORIES = ["Cakes", "Pastry"];
+
+interface Milestone {
+  threshold: number;
+  label: string;
+  icon: string;
+  description: string;
+}
+
+const MILESTONES: Milestone[] = [
+  { threshold: 25, label: "Getting Closer", icon: "💕", description: "They're starting to open up to you..." },
+  { threshold: 50, label: "First Date", icon: "☕", description: "Cafe Date unlocked!" },
+  { threshold: 75, label: "Confession", icon: "💝", description: "Something special is about to happen..." },
+  { threshold: 100, label: "Soulmates", icon: "💖", description: "You've reached the deepest bond." },
+];
+
+function getRelationshipStage(affection: number) {
+  if (affection >= 100) return { name: "Soulmates", tier: 4 };
+  if (affection >= 75) return { name: "In Love", tier: 3 };
+  if (affection >= 50) return { name: "Dating", tier: 2 };
+  if (affection >= 25) return { name: "Friends", tier: 1 };
+  return { name: "Strangers", tier: 0 };
+}
+
 export default function Home() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -90,17 +116,35 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [affection, setAffection] = useState(40); // Affection level (0-100)
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [receiptTimestamp, setReceiptTimestamp] = useState<Date>(new Date());
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
+  // Milestone & relationship state
+  const [shownMilestones, setShownMilestones] = useState<number[]>([]);
+  const [activeMilestone, setActiveMilestone] = useState<Milestone | null>(null);
+  const [holdingHands, setHoldingHands] = useState(false);
+  const stage = getRelationshipStage(affection);
+
   // Menu system state
   const [currency, setCurrency] = useState(50);
   const [orderedItems, setOrderedItems] = useState<string[]>([]);
   const [showMenu, setShowMenu] = useState(false);
   const [menuTab, setMenuTab] = useState("Coffee");
+
+  // Memoize heart positions so they don't jump on re-render
+  const heartStyles = useMemo(() =>
+    Array.from({ length: 12 }).map(() => ({
+      left: `${Math.random() * 100}%`,
+      animationDelay: `${Math.random() * 6}s`,
+      animationDuration: `${6 + Math.random() * 4}s`,
+      fontSize: `${1 + Math.random() * 1.2}rem`,
+    })),
+  []);
 
   const sendChatMessage = async (messageText: string) => {
     const userMsg: Message = { role: "user", text: messageText };
@@ -116,7 +160,7 @@ export default function Home() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: messageText, history: historyForApi, model: modelName }),
+        body: JSON.stringify({ message: messageText, history: historyForApi, model: modelName, affection }),
       });
 
       const data = await res.json();
@@ -133,7 +177,8 @@ export default function Home() {
 
       const multiplier = EMOTION_MULTIPLIERS[expression] ?? 0;
       if (multiplier !== 0) {
-        const change = AFFECTION_BASE_CHANGE * multiplier;
+        const handsBonus = holdingHands ? 1.5 : 1;
+        const change = AFFECTION_BASE_CHANGE * multiplier * handsBonus;
         setAffection((prev) => Math.max(0, Math.min(100, prev + change)));
       }
 
@@ -152,11 +197,47 @@ export default function Home() {
     }
   };
 
+  const orderTotal = orderedItems.reduce((sum, name) => {
+    const item = MENU_ITEMS.find((m) => m.name === name);
+    return sum + (item?.price ?? 0);
+  }, 0);
+  const availableBalance = currency - orderTotal;
+
+  // Current drink/food on the table
+  const currentDrink = orderedItems.find((name) => {
+    const m = MENU_ITEMS.find((i) => i.name === name);
+    return m && DRINK_CATEGORIES.includes(m.category);
+  });
+  const currentFood = orderedItems.find((name) => {
+    const m = MENU_ITEMS.find((i) => i.name === name);
+    return m && FOOD_CATEGORIES.includes(m.category);
+  });
+
+  const getEffectiveCost = (item: MenuItem) => {
+    const isDrink = DRINK_CATEGORIES.includes(item.category);
+    const replacedName = isDrink ? currentDrink : currentFood;
+    const replacedPrice = replacedName
+      ? (MENU_ITEMS.find((m) => m.name === replacedName)?.price ?? 0)
+      : 0;
+    return item.price - replacedPrice;
+  };
+
   const handlePurchase = (item: MenuItem) => {
-    if (currency < item.price || orderedItems.includes(item.name)) return;
-    setCurrency((prev) => prev - item.price);
-    setOrderedItems((prev) => [...prev, item.name]);
-    setShowMenu(false);
+    if (orderedItems.includes(item.name)) return;
+    const effectiveCost = getEffectiveCost(item);
+    if (availableBalance < effectiveCost) return;
+
+    const isDrink = DRINK_CATEGORIES.includes(item.category);
+    setOrderedItems((prev) => {
+      const filtered = prev.filter((name) => {
+        const existing = MENU_ITEMS.find((m) => m.name === name);
+        if (!existing) return true;
+        return isDrink
+          ? !DRINK_CATEGORIES.includes(existing.category)
+          : !FOOD_CATEGORIES.includes(existing.category);
+      });
+      return [...filtered, item.name];
+    });
     sendChatMessage(`I just ordered ${item.name} for us!`);
   };
 
@@ -173,6 +254,26 @@ export default function Home() {
     const timer = setTimeout(() => setIsLoading(false), 1500);
     return () => clearTimeout(timer);
   }, [isCafeDate]);
+
+  // Milestone detection
+  useEffect(() => {
+    for (const milestone of MILESTONES) {
+      if (affection >= milestone.threshold && !shownMilestones.includes(milestone.threshold)) {
+        setShownMilestones((prev) => [...prev, milestone.threshold]);
+        setActiveMilestone(milestone);
+        // Auto-dismiss after 4 seconds
+        const timer = setTimeout(() => setActiveMilestone(null), 4000);
+        // Trigger confession at 75
+        if (milestone.threshold === 75) {
+          const confessionName = modelName === "arisa" ? "Arisa" : "Asuka";
+          setTimeout(() => {
+            sendChatMessage(`[${confessionName} looks at you with a tender expression]`);
+          }, 1500);
+        }
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [affection]);
 
   // Detect time of day
   useEffect(() => {
@@ -327,9 +428,17 @@ export default function Home() {
       )}
       
       {/* Back Button */}
-      <button className="chat-back-button" onClick={() => router.push("/")}>
+      <button className="chat-back-button" onClick={() => {
+        if (isCafeDate) {
+          setReceiptTimestamp(new Date());
+          setShowReceipt(true);
+        } else {
+          router.push("/");
+        }
+      }}>
         <ArrowLeft size={16} />
       </button>
+
 
       {/* LEFT COLUMN: ARISA MODEL WITH PARALLAX (65% Width) */}
       <section className="model-section">
@@ -397,7 +506,7 @@ export default function Home() {
                   const item = MENU_ITEMS.find((m) => m.name === name);
                   if (!item) return null;
                   return (
-                    <div key={name} className="table-item" style={{ animationDelay: `${i * 0.1}s` }}>
+                    <div key={name} className={`table-item ${item.category === "Cakes" ? "table-item-cake" : ""}`} style={{ animationDelay: `${i * 0.1}s` }}>
                       <img src={item.image} alt={item.name} />
                     </div>
                   );
@@ -414,14 +523,26 @@ export default function Home() {
           <Heart size={14} fill="var(--soft-berry)" color="var(--soft-berry)" />
           <span>lvl</span>
         </div>
-        <div className="affection-meter-bar">
-          <div 
-            className="affection-meter-fill"
-            style={{ height: `${affection}%` }}
-          >
-            <div className="affection-meter-shine" />
+        <div className="meter-bar-wrapper">
+          <div className="affection-meter-bar">
+            <div
+              className={`affection-meter-fill stage-${stage.tier}`}
+              style={{ height: `${affection}%` }}
+            >
+              <div className="affection-meter-shine" />
+            </div>
           </div>
+          {/* Milestone tick marks */}
+          {MILESTONES.map((m) => (
+            <div
+              key={m.threshold}
+              className={`meter-tick ${affection >= m.threshold ? "reached" : ""}`}
+              style={{ bottom: `${m.threshold}%` }}
+              title={m.label}
+            />
+          ))}
         </div>
+        <span className="stage-label">{stage.name}</span>
       </div>
 
       {/* RIGHT COLUMN: CHAT INTERFACE (35% Width) */}
@@ -429,35 +550,55 @@ export default function Home() {
         
         {/* Header */}
         <div className="chat-header">
-          <div className="chat-header-content">
-            <div className="status-indicator" />
-            <h1 className="chat-title">
-              {modelName === "arisa" ? "Arisa (your girlfriend)" : "Asuka (your boyfriend)"}
-            </h1>
+          <div className="chat-header-top">
+            <div className="chat-header-content">
+              <div className="status-indicator" />
+              <h1 className="chat-title">
+                {modelName === "arisa" ? "Arisa (your girlfriend)" : "Asuka (your boyfriend)"}
+              </h1>
+            </div>
+            <div className="header-currency">${currency}</div>
           </div>
-          <button 
-            className={`cafe-date-btn ${affection < CAFE_DATE_THRESHOLD && !isCafeDate ? 'disabled' : ''}`}
-            onClick={() => affection >= CAFE_DATE_THRESHOLD || isCafeDate ? setIsCafeDate(!isCafeDate) : null}
-            title={affection < CAFE_DATE_THRESHOLD && !isCafeDate ? `Affection must be ${CAFE_DATE_THRESHOLD}+ to unlock` : ''}
-          >
-            {isCafeDate ? 'Back Home' : affection >= CAFE_DATE_THRESHOLD ? 'Cafe Date' : `🔒 ${CAFE_DATE_THRESHOLD}%`}
-          </button>
-          {isCafeDate && (
+          <div className="chat-header-actions">
             <button
-              className="cafe-date-btn menu-btn"
-              onClick={() => setShowMenu(true)}
+              className={`header-action-btn ${affection < CAFE_DATE_THRESHOLD && !isCafeDate ? 'locked' : ''}`}
+              onClick={() => {
+                if (isCafeDate) {
+                  setReceiptTimestamp(new Date());
+                  setShowReceipt(true);
+                } else if (affection >= CAFE_DATE_THRESHOLD) {
+                  setIsCafeDate(true);
+                }
+              }}
+              title={affection < CAFE_DATE_THRESHOLD && !isCafeDate ? `Affection must be ${CAFE_DATE_THRESHOLD}+ to unlock` : ''}
             >
-              Menu
+              {isCafeDate ? 'Back Home' : affection >= CAFE_DATE_THRESHOLD ? 'Cafe Date' : `🔒 ${CAFE_DATE_THRESHOLD}%`}
             </button>
-          )}
-          <button
-            className="audio-toggle-btn"
-            onClick={() => setIsAudioEnabled(!isAudioEnabled)}
-            title={isAudioEnabled ? 'Disable voice' : 'Enable voice'}
-          >
-            {isAudioEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
-          </button>
-          <Cpu size={16} className="header-icon" />
+            {isCafeDate && (
+              <button
+                className="header-action-btn"
+                onClick={() => setShowMenu(true)}
+              >
+                Menu
+              </button>
+            )}
+            {affection >= 75 && (
+              <button
+                className={`header-action-btn ${holdingHands ? "active-hands" : ""}`}
+                onClick={() => setHoldingHands(!holdingHands)}
+                title={holdingHands ? "Let go" : "Hold hands (1.5x affection boost)"}
+              >
+                {holdingHands ? "🤝 Holding Hands" : "🫱 Hold Hands"}
+              </button>
+            )}
+            <button
+              className="header-action-btn icon-btn"
+              onClick={() => setIsAudioEnabled(!isAudioEnabled)}
+              title={isAudioEnabled ? 'Disable voice' : 'Enable voice'}
+            >
+              {isAudioEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+            </button>
+          </div>
         </div>
 
         {/* Chat Area */}
@@ -524,6 +665,24 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Milestone Popup */}
+      {activeMilestone && (
+        <div className="milestone-popup" onClick={() => setActiveMilestone(null)}>
+          <span className="milestone-icon">{activeMilestone.icon}</span>
+          <span className="milestone-label">{activeMilestone.label}</span>
+          <span className="milestone-desc">{activeMilestone.description}</span>
+        </div>
+      )}
+
+      {/* Soulmates Hearts */}
+      {affection >= 100 && (
+        <div className="soulmates-hearts">
+          {heartStyles.map((style, i) => (
+            <span key={i} className="soulmate-heart" style={style}>💖</span>
+          ))}
+        </div>
+      )}
+
       {/* Menu Modal */}
       {showMenu && (
         <div className="menu-overlay" onClick={() => setShowMenu(false)}>
@@ -536,8 +695,8 @@ export default function Home() {
 
             {/* Currency display */}
             <div className="menu-currency">
-              <span className="menu-currency-label">Your Balance</span>
-              <span className="menu-currency-value">${currency}</span>
+              <span className="menu-currency-label">Available to spend</span>
+              <span className="menu-currency-value">${availableBalance}</span>
             </div>
 
             {/* Tab navigation */}
@@ -557,7 +716,7 @@ export default function Home() {
             <div className="menu-items">
               {MENU_ITEMS.filter((item) => item.category === menuTab).map((item) => {
                 const isOrdered = orderedItems.includes(item.name);
-                const canAfford = currency >= item.price;
+                const canAfford = availableBalance >= getEffectiveCost(item);
                 return (
                   <div
                     key={item.name}
@@ -587,6 +746,24 @@ export default function Home() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Receipt Modal */}
+      {showReceipt && (
+        <Receipt
+          modelName={modelName}
+          timestamp={receiptTimestamp}
+          items={orderedItems.map((name) => {
+            const item = MENU_ITEMS.find((m) => m.name === name);
+            return { name, price: item?.price ?? 0 };
+          })}
+          onPay={() => {
+            setCurrency((prev) => prev - orderTotal);
+            setShowReceipt(false);
+            setIsCafeDate(false);
+            setOrderedItems([]);
+          }}
+        />
       )}
 
     </main>

@@ -337,9 +337,16 @@ body {
   gap: 0.25rem;
 }
 
-.affection-meter-bar {
+.meter-bar-wrapper {
   flex: 1;
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.affection-meter-bar {
   width: 18px;
+  height: 100%;
   background: rgba(255, 255, 255, 0.6);
   border: 2px solid var(--light-mauve);
   border-radius: 12px;
@@ -353,14 +360,13 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(to top, 
-    #8d1731 0%, 
-    #fa3e67 50%, 
+  background: linear-gradient(to top,
+    #8d1731 0%,
+    #fa3e67 50%,
     #ff1d4e 100%
   );
-  transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 14px;
-  box-shadow: 0 -2px 12px rgba(218, 211, 213, 0.4);
+  transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1), background 0.5s ease;
+  border-radius: 10px;
 }
 
 .affection-meter-shine {
@@ -399,12 +405,18 @@ body {
 
 /* Chat Header */
 .chat-header {
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--light-mauve);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  background: var(--pale-blush);
+}
+
+.chat-header-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--pale-blush);
 }
 
 .chat-header-content {
@@ -430,8 +442,71 @@ body {
   text-shadow: none;
 }
 
-.header-icon {
-  color: var(--dusty-pink);
+.header-currency {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #5a7a3a;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--light-mauve);
+  border-radius: 2rem;
+  padding: 0.25rem 0.7rem;
+  letter-spacing: 0.02em;
+}
+
+.chat-header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.header-action-btn {
+  flex: 1;
+  padding: 0.45rem 0.75rem;
+  background: linear-gradient(135deg, var(--pale-blush), var(--cream-rose));
+  color: var(--warm-plum);
+  border: 1.5px solid var(--light-mauve);
+  border-radius: 2rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.02em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.header-action-btn:hover {
+  background: linear-gradient(135deg, var(--dusty-pink), var(--soft-berry));
+  color: white;
+  border-color: var(--soft-berry);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(216, 140, 160, 0.3);
+}
+
+.header-action-btn:active {
+  transform: translateY(0);
+}
+
+.header-action-btn.locked {
+  background: linear-gradient(135deg, #e8e0e3, #d9d0d3);
+  color: #9a8a90;
+  border-color: #d0c5c8;
+  cursor: not-allowed;
+}
+
+.header-action-btn.locked:hover {
+  transform: none;
+  box-shadow: none;
+  background: linear-gradient(135deg, #e8e0e3, #d9d0d3);
+  color: #9a8a90;
+  border-color: #d0c5c8;
+}
+
+.header-action-btn.icon-btn {
+  flex: 0;
+  padding: 0.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Chat Messages Area */
@@ -464,62 +539,6 @@ body {
   padding: 0 1.5rem;
 }
 
-/* Cafe Date Button */
-.cafe-date-btn {
-  padding: 0.5rem 1rem;
-  background: linear-gradient(135deg, var(--dusty-pink), var(--soft-berry));
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(231, 166, 179, 0.3);
-}
-
-.cafe-date-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(231, 166, 179, 0.4);
-}
-
-.cafe-date-btn:active {
-  transform: translateY(0);
-}
-
-.cafe-date-btn.disabled {
-  background: linear-gradient(135deg, #c9c9c9, #a8a8a8);
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.cafe-date-btn.disabled:hover {
-  transform: none;
-  box-shadow: 0 2px 8px rgba(169, 169, 169, 0.3);
-}
-
-/* Audio Toggle Button */
-.audio-toggle-btn {
-  padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid var(--light-mauve);
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--warm-plum);
-}
-
-.audio-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.8);
-  border-color: var(--dusty-pink);
-}
-
-.audio-toggle-btn:active {
-  transform: scale(0.95);
-}
 
 .empty-chat p {
   line-height: 1.625;
@@ -901,6 +920,177 @@ body {
   color: #6699CC;
 }
 
+/* Receipt Styles */
+.receipt-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.receipt-container {
+  background: white;
+  width: 90%;
+  max-width: 450px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 1rem;
+  padding: 2.5rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  position: relative;
+  animation: slideUp 0.4s ease-out;
+  font-family: 'Courier New', monospace;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.receipt-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  transition: color 0.2s;
+  padding: 0.25rem;
+}
+
+.receipt-close:hover {
+  color: #000;
+}
+
+.receipt-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.receipt-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--warm-plum);
+  margin: 0 0 0.5rem 0;
+}
+
+.receipt-subtitle {
+  font-size: 0.95rem;
+  color: #666;
+  margin: 0;
+}
+
+.receipt-divider {
+  border-top: 1px dashed #ccc;
+  margin: 1rem 0;
+}
+
+.receipt-divider-thick {
+  border-top: 2px solid #333;
+  margin: 0.75rem 0;
+}
+
+.receipt-details {
+  margin: 1rem 0;
+}
+
+.receipt-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.receipt-info span:first-child {
+  font-weight: 600;
+}
+
+.receipt-items {
+  margin: 1rem 0;
+}
+
+.receipt-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95rem;
+  color: #333;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.item-name {
+  flex: 1;
+}
+
+.item-price {
+  font-weight: 600;
+  margin-left: 1rem;
+}
+
+.receipt-totals {
+  margin: 1rem 0;
+}
+
+.receipt-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95rem;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.receipt-line span:last-child {
+  font-weight: 600;
+}
+
+.receipt-total {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--warm-plum);
+  margin-top: 0.75rem;
+}
+
+.receipt-pay-btn {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, var(--dusty-pink) 0%, var(--soft-berry) 100%);
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 1.5rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(216, 140, 160, 0.3);
+}
+
+.receipt-pay-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(216, 140, 160, 0.4);
+}
+
+.receipt-footer {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+  color: var(--dusty-pink);
+  font-style: italic;
+}
+
 /* About Page Styles */
 .about-container {
   min-height: 100vh;
@@ -1025,15 +1215,6 @@ body {
 
 /* =================== MENU SYSTEM =================== */
 
-/* Menu button in header */
-.menu-btn {
-  background: linear-gradient(135deg, #c6956b, #a87b54) !important;
-  box-shadow: 0 2px 8px rgba(168, 123, 84, 0.35) !important;
-}
-
-.menu-btn:hover {
-  box-shadow: 0 4px 14px rgba(168, 123, 84, 0.5) !important;
-}
 
 /* Overlay */
 .menu-overlay {
@@ -1085,8 +1266,6 @@ body {
 .menu-banner img {
   width: 100%;
   display: block;
-  object-fit: cover;
-  max-height: 220px;
 }
 
 .menu-close {
@@ -1336,12 +1515,12 @@ body {
 
 .table-items {
   position: absolute;
-  bottom: 12%;
-  left: 50%;
+  bottom: 26%;
+  left: 42%;
   transform: translateX(-50%);
   z-index: 9;
   display: flex;
-  gap: 0.5rem;
+  gap: 1.5rem;
   align-items: flex-end;
   justify-content: center;
   pointer-events: none;
@@ -1349,19 +1528,20 @@ body {
 }
 
 .table-item {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.7);
-  box-shadow: 0 3px 10px rgba(92, 58, 74, 0.2);
+  width: 110px;
+  height: 110px;
   animation: tableItemPop 0.35s ease-out both;
 }
 
 .table-item img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+}
+
+.table-item-cake {
+  width: 140px;
+  height: 140px;
 }
 
 @keyframes tableItemPop {
@@ -1374,3 +1554,165 @@ body {
     transform: scale(1) translateY(0);
   }
 }
+
+/* =================== RELATIONSHIP STAGES =================== */
+
+/* Meter fill color per stage */
+.affection-meter-fill.stage-0 {
+  background: linear-gradient(to top, #b0a0a5 0%, #c9b8bd 50%, #d4c5cb 100%);
+}
+.affection-meter-fill.stage-1 {
+  background: linear-gradient(to top, #c96b7a 0%, #e89aa8 50%, #f0b0bc 100%);
+}
+.affection-meter-fill.stage-2 {
+  background: linear-gradient(to top, #b84060 0%, #e05580 50%, #f07098 100%);
+}
+.affection-meter-fill.stage-3 {
+  background: linear-gradient(to top, #8d1731 0%, #d42a55 50%, #f03068 100%);
+}
+.affection-meter-fill.stage-4 {
+  background: linear-gradient(to top, #d4a017 0%, #f0c040 50%, #ffe066 100%);
+}
+
+/* Milestone tick marks */
+.meter-tick {
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  height: 2px;
+  background: var(--light-mauve);
+  border-radius: 1px;
+  z-index: 2;
+  transition: background 0.3s;
+}
+
+.meter-tick.reached {
+  background: var(--soft-berry);
+}
+
+/* Stage label below meter */
+.stage-label {
+  font-size: 0.5rem;
+  color: var(--warm-plum);
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.03em;
+  writing-mode: horizontal-tb;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+/* Hold hands active state */
+.header-action-btn.active-hands {
+  background: linear-gradient(135deg, #ffb3c6, #ff8fa3) !important;
+  color: white !important;
+  border-color: #ff8fa3 !important;
+  box-shadow: 0 0 12px rgba(255, 143, 163, 0.4);
+}
+
+/* =================== MILESTONE TOAST =================== */
+
+.milestone-popup {
+  position: fixed;
+  top: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(253, 242, 245, 0.95));
+  backdrop-filter: blur(16px);
+  border: 1.5px solid var(--light-mauve);
+  border-radius: 3rem;
+  box-shadow: 0 8px 32px rgba(216, 140, 160, 0.2), 0 2px 8px rgba(92, 58, 74, 0.08);
+  cursor: pointer;
+  animation: milestoneSlideIn 0.5s ease-out, milestoneFadeOut 0.5s ease-in 3.5s forwards;
+}
+
+@keyframes milestoneSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes milestoneFadeOut {
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-12px);
+  }
+}
+
+.milestone-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.milestone-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--warm-plum);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.milestone-desc {
+  font-size: 0.75rem;
+  color: var(--dusty-pink);
+  white-space: nowrap;
+}
+
+/* =================== SOULMATES HEARTS =================== */
+
+.soulmates-hearts {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+  overflow: hidden;
+}
+
+.soulmate-heart {
+  position: absolute;
+  bottom: -30px;
+  opacity: 0;
+  animation: soulFloat ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes soulFloat {
+  0% {
+    transform: translateY(0) translateX(0) scale(0.8);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.45;
+  }
+  25% {
+    transform: translateY(-25vh) translateX(15px) scale(1);
+  }
+  50% {
+    transform: translateY(-50vh) translateX(-10px) scale(0.95);
+  }
+  75% {
+    transform: translateY(-75vh) translateX(12px) scale(0.9);
+  }
+  92% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: translateY(-100vh) translateX(-5px) scale(0.85);
+    opacity: 0;
+  }
+}
+
