@@ -247,6 +247,82 @@ body {
   border-radius: 50%;
 }
 
+/* Affection Meter */
+.affection-meter-container {
+  width: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 0.5rem;
+  background: var(--cream-rose);
+  border-right: 2px solid rgb(31, 20, 20);
+  z-index: 10;
+  box-shadow: 3px 0 15px rgba(231, 166, 179, 0.15);
+  gap: 0.75rem;
+}
+
+.affection-meter-label {
+  font-size: 0.6rem;
+  color: var(--warm-plum);
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  writing-mode: horizontal-tb;
+  line-height: 1.2;
+  text-transform: lowercase;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.affection-meter-bar {
+  flex: 1;
+  width: 13px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 2px solid var(--light-mauve);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 2px 8px rgba(92, 58, 74, 0.1);
+}
+
+.affection-meter-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, 
+    var(--soft-berry) 0%, 
+    var(--dusty-pink) 50%, 
+    #d85e79 100%
+  );
+  transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 14px;
+  box-shadow: 0 -2px 12px rgba(218, 211, 213, 0.4);
+}
+
+.affection-meter-shine {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(to bottom, 
+    rgba(255, 255, 255, 0.4) 0%, 
+    rgba(255, 255, 255, 0) 100%
+  );
+  border-radius: 14px 14px 0 0;
+}
+
+.affection-meter-value {
+  font-size: 0.7rem;
+  color: var(--warm-plum);
+  font-weight: 600;
+  text-align: center;
+  min-height: 1rem;
+}
+
 /* Chat Section */
 .chat-section {
   width: 30%;
@@ -348,6 +424,17 @@ body {
 
 .cafe-date-btn:active {
   transform: translateY(0);
+}
+
+.cafe-date-btn.disabled {
+  background: linear-gradient(135deg, #c9c9c9, #a8a8a8);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.cafe-date-btn.disabled:hover {
+  transform: none;
+  box-shadow: 0 2px 8px rgba(169, 169, 169, 0.3);
 }
 
 /* Audio Toggle Button */
