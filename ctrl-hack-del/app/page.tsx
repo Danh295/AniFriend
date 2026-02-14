@@ -1,16 +1,23 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { Heart, Sparkles, Shuffle } from "lucide-react";
+import { Heart, Sparkles, Shuffle, Info } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function LandingPage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
   const [timeOfDay, setTimeOfDay] = useState("afternoon");
+  const [hearts, setHearts] = useState<Array<{ left: string; delay: string; duration: string; color: string }>>([]);
 
+  // Generate hearts on client side only
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
+    const colors = ['#ff6b6b', '#ff8585', '#ffa0a0', '#ffb3c6', '#ff4d4d', '#ff9999', '#ff7575'];
+    const generatedHearts = [...Array(15)].map(() => ({
+      left: `${Math.random() * 100}%`,
+      delay: `${Math.random() * 5}s`,
+      duration: `${8 + Math.random() * 4}s`,
+      color: colors[Math.floor(Math.random() * colors.length)],
+    }));
+    setHearts(generatedHearts);
   }, []);
 
   // Detect time of day
@@ -45,16 +52,23 @@ export default function LandingPage() {
 
   return (
     <main className="landing-container">
-      {isLoading && (
-        <div className="loading-screen">
-          <p className="loading-text">loading...</p>
-        </div>
-      )}
-
-      {/* Background layers */}
-      <div className={`parallax-layer sky-layer sky-${timeOfDay}`} />
-      <div className="parallax-layer house-layer" />
-      <div className="parallax-layer bush-layer" />
+      {/* Floating Hearts Background */}
+      <div className="floating-hearts">
+        {hearts.map((heart, i) => (
+          <div
+            key={i}
+            className="heart"
+            style={{
+              left: heart.left,
+              animationDelay: heart.delay,
+              animationDuration: heart.duration,
+              color: heart.color,
+            }}
+          >
+            ♥
+          </div>
+        ))}
+      </div>
 
       {/* Main content */}
       <div className="landing-content">
@@ -65,7 +79,7 @@ export default function LandingPage() {
         </h1>
         
         <p className="landing-subtitle">
-          Who would you like to spend time with today?
+          Whether it be with a loved one, friends, or one of our characters, <br></br>No one should spend Valentine's Day Alone! 
         </p>
 
         <div className="model-selection-grid">
@@ -95,7 +109,7 @@ export default function LandingPage() {
               <Heart className="model-icon" />
               <h2 className="model-name">Asuka</h2>
               <p className="model-description">
-                Your charming boyfriend ready for adventure
+                Your charming non-chalant boyfriend
               </p>
             </div>
             <div className="model-card-hover">
@@ -117,6 +131,23 @@ export default function LandingPage() {
             </div>
             <div className="model-card-hover">
               <span>Click to start</span>
+            </div>
+          </button>
+
+          {/* About Us Button */}
+          <button 
+            className="model-card about-card"
+            onClick={() => router.push("/about")}
+          >
+            <div className="model-card-content">
+              <Info className="model-icon" />
+              <h2 className="model-name">About Us</h2>
+              <p className="model-description">
+                Learn more about our companions and mission
+              </p>
+            </div>
+            <div className="model-card-hover">
+              <span>Learn more</span>
             </div>
           </button>
         </div>
