@@ -18,28 +18,47 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [chatHistory, setChatHistory] = useState<Message[]>([]);
   const [currentEmotion, setCurrentEmotion] = useState("Neutral");
+  const [isThinking, setIsThinking] = useState(false);
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || isThinking) return;
 
-    // 1. Add User Message
     const userMsg: Message = { role: "user", text: input };
-    setChatHistory((prev) => [...prev, userMsg]);
     const userInput = input;
+    setChatHistory((prev) => [...prev, userMsg]);
     setInput("");
+    setIsThinking(true);
 
-    // 2. Simulate AI Response (DELETE THIS LATER)
-    setTimeout(() => {
-      const responses = [
-        { text: "Are you ignored me? Rude.", emotion: "Angry" },
-        { text: "Omg stop, you're making me blush!", emotion: "Shy" },
-        { text: "I am literally a computer program.", emotion: "Neutral" },
-      ];
-      const reply = responses[Math.floor(Math.random() * responses.length)];
-      
-      setChatHistory(prev => [...prev, { role: "ai", ...reply }]);
-      setCurrentEmotion(reply.emotion);
-    }, 1000);
+    try {
+      const historyForApi = chatHistory.map((msg) => ({
+        role: msg.role === "user" ? "user" : "model",
+        content: msg.text,
+      }));
+
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userInput, history: historyForApi }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to fetch response");
+      }
+
+      const replyText = data?.reply || "(No response)";
+      setChatHistory((prev) => [...prev, { role: "ai", text: replyText }]);
+      setCurrentEmotion("Neutral");
+    } catch (error) {
+      console.error(error);
+      setChatHistory((prev) => [
+        ...prev,
+        { role: "ai", text: "⚠️ Gemini is unavailable. Check your API key and try again." },
+      ]);
+      setCurrentEmotion("Neutral");
+    } finally {
+      setIsThinking(false);
+    }
   };
 
   return (
@@ -76,6 +95,14 @@ export default function Home() {
               </div>
             </div>
           ))}
+
+          {isThinking && (
+            <div className="flex justify-start">
+              <div className="max-w-[85%] p-3 rounded-xl text-sm leading-relaxed bg-pink-950/30 border border-pink-500/20 text-pink-100 rounded-bl-none animate-pulse">
+                ...
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Input Area */}
@@ -89,7 +116,7 @@ export default function Home() {
               placeholder="Command..."
               className="flex-1 bg-transparent border-none outline-none text-sm px-2 font-mono placeholder-white/20"
             />
-            <button onClick={handleSend} className="p-2 hover:bg-white/10 rounded-md transition-colors text-cyan-400">
+            <button onClick={handleSend} disabled={!input.trim() || isThinking} className="p-2 hover:bg-white/10 rounded-md transition-colors text-cyan-400 disabled:opacity-40 disabled:hover:bg-transparent">
               <Send size={16} />
             </button>
           </div>

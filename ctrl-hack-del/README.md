@@ -2,6 +2,15 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Gemini API Key
+
+Create a local env file and add your API key:
+
+1) Copy the example file:
+	- `.env.local.example` → `.env.local`
+2) Set the value:
+	- `GEMINI_API_KEY=YOUR_GEMINI_API_KEY_HERE`
+
 First, run the development server:
 
 ```bash
