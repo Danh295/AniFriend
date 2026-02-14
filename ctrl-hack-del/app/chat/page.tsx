@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Send, Mic, Cpu, Volume2, VolumeX, Heart, ArrowLeft } from "lucide-react";
+import Receipt from "@/components/Receipt";
 
 // Import Canvas with NO SSR
 const ModelCanvas = dynamic(() => import("@/components/ModelCanvas"), {
@@ -55,6 +56,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [affection, setAffection] = useState(40); // Affection level (0-100)
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [receiptTimestamp, setReceiptTimestamp] = useState<Date>(new Date());
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -381,7 +384,14 @@ export default function Home() {
           </div>
           <button 
             className={`cafe-date-btn ${affection < CAFE_DATE_THRESHOLD && !isCafeDate ? 'disabled' : ''}`}
-            onClick={() => affection >= CAFE_DATE_THRESHOLD || isCafeDate ? setIsCafeDate(!isCafeDate) : null}
+            onClick={() => {
+              if (isCafeDate) {
+                setReceiptTimestamp(new Date());
+                setShowReceipt(true);
+              } else if (affection >= CAFE_DATE_THRESHOLD) {
+                setIsCafeDate(true);
+              }
+            }}
             title={affection < CAFE_DATE_THRESHOLD && !isCafeDate ? `Affection must be ${CAFE_DATE_THRESHOLD}+ to unlock` : ''}
           >
             {isCafeDate ? 'Back Home' : affection >= CAFE_DATE_THRESHOLD ? 'Cafe Date' : `🔒 ${CAFE_DATE_THRESHOLD}%`}
@@ -459,6 +469,18 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Receipt Modal */}
+      {showReceipt && (
+        <Receipt 
+          modelName={modelName}
+          timestamp={receiptTimestamp}
+          onPay={() => {
+            setShowReceipt(false);
+            setIsCafeDate(false);
+          }}
+        />
+      )}
 
     </main>
   );

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.35.0",
+    "@google/generative-ai": "^0.24.1",
     "clsx": "^2.1.1",
     "elevenlabs": "^1.59.0",
     "framer-motion": "^12.34.0",
