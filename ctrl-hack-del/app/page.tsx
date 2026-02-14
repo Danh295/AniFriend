@@ -21,6 +21,7 @@ export default function Home() {
   const [isThinking, setIsThinking] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [timeOfDay, setTimeOfDay] = useState("afternoon");
+  const [isCafeDate, setIsCafeDate] = useState(false);
 
   // Detect time of day
   useEffect(() => {
@@ -102,38 +103,64 @@ export default function Home() {
       
       {/* LEFT COLUMN: ARISA MODEL WITH PARALLAX (65% Width) */}
       <section className="model-section">
-        {/* Sky Layer - Deepest */}
-        <div 
-          className={`parallax-layer sky-layer sky-${timeOfDay}`}
-        />
-        
-        {/* Tree/Foliage Layer */}
-        <div 
-          className="parallax-layer tree-layer"
-          style={{
-            transform: `translateX(${mousePos.x * 6}px)`
-          }}
-        />
-        
-        {/* House Layer */}
-        <div 
-          className="parallax-layer house-layer"
-        />
-        
-        {/* Bush Layer */}
-        <div 
-          className="parallax-layer bush-layer"
-          style={{
-            transform: `translateX(${mousePos.x * 8}px)`
-          }}
-        />
-        
-        {/* The Model - Above all layers */}
-        <div className="model-wrapper" style={{
-          transform: `translateX(${mousePos.x * 20}px)`
-        }}>
-          <ModelCanvas emotion={currentEmotion} />
-        </div>
+        {!isCafeDate ? (
+          <>
+            {/* BACKGROUND 1: Outdoor Scene */}
+            {/* Sky Layer - Deepest */}
+            <div 
+              className={`parallax-layer sky-layer sky-${timeOfDay}`}
+            />
+            
+            {/* House Layer */}
+            <div 
+              className="parallax-layer house-layer"
+            />
+            
+            {/* Bush Layer */}
+            <div 
+              className="parallax-layer bush-layer"
+              style={{
+                transform: `translateX(${mousePos.x * 8}px)`
+              }}
+            />
+            
+            {/* The Model - Above all layers */}
+            <div className="model-wrapper" style={{
+              transform: `translateX(${mousePos.x * 20}px)`
+            }}>
+              <ModelCanvas emotion={currentEmotion} />
+            </div>
+          </>
+        ) : (
+          <>
+            {/* BACKGROUND 2: Cafe Scene */}
+            {/* Cafe Background - Static at the very back */}
+            <div className="parallax-layer cafe-background" />
+            
+            {/* Chair Layer - Behind model */}
+            <div 
+              className="parallax-layer chair-layer"
+              style={{
+                transform: `translateX(${mousePos.x * 10}px)`
+              }}
+            />
+            
+            {/* The Model - Smaller size for cafe */}
+            <div className="model-wrapper cafe-model" style={{
+              transform: `translateX(${mousePos.x * 15}px)`
+            }}>
+              <ModelCanvas emotion={currentEmotion} />
+            </div>
+            
+            {/* Table Layer - In front of model */}
+            <div 
+              className="parallax-layer table-layer"
+              style={{
+                transform: `translateX(${mousePos.x * 4}px)`
+              }}
+            />
+          </>
+        )}
       </section>
 
       {/* RIGHT COLUMN: CHAT INTERFACE (35% Width) */}
@@ -145,6 +172,12 @@ export default function Home() {
             <div className="status-indicator" />
             <h1 className="chat-title">Arisa (your girlfriend)</h1>
           </div>
+          <button 
+            className="cafe-date-btn"
+            onClick={() => setIsCafeDate(!isCafeDate)}
+          >
+            {isCafeDate ? 'Back Home' : 'Cafe Date'}
+          </button>
           <Cpu size={16} className="header-icon" />
         </div>
 

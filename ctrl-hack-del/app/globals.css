@@ -97,42 +97,11 @@ body {
 /* Night sky (8pm - 5am) */
 .sky-layer.sky-night {
   background: linear-gradient(to bottom, 
-    #4A4E69 0%,
-    #6B5B95 30%,
-    #957DAD 60%,
-    #D4A5A5 100%
+    #171820 0%,
+    #3c3550 30%,
+    #6b597c 60%,
+    #785959 100%
   ) !important;
-}
-/* Tree Layer - Foliage in background */
-.tree-layer {
-  z-index: 5;
-  background-image: url('/tree.png'); /* Replace with actual tree PNG */
-  background-size: 65%;
-  background-repeat: no-repeat;
-  background-position: left -3% bottom -5%;
-}
-
-/* Fallback tree styling with CSS if no image */
-.tree-layer::before {
-  content: '';
-  position: absolute;
-  bottom: 0%;
-  left: -100px;
-  width: 250px;
-  height: 250px;
-  background: radial-gradient(circle, rgba(120, 160, 100, 0.3) 0%, transparent 70%);
-  border-radius: 50%;
-}
-
-.tree-layer::after {
-  content: '';
-  position: absolute;
-  bottom: -5%;
-  left: 0px;
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, rgba(100, 140, 80, 0.25) 0%, transparent 70%);
-  border-radius: 50%;
 }
 
 /* Bush Layer - Foreground foliage */
@@ -141,7 +110,7 @@ body {
   background-image: url('/bush.png'); /* Replace with actual bush PNG */
   background-size: 30%;
   background-repeat: no-repeat;
-  background-position: right 10% bottom -5%;
+  background-position: left 10% bottom -5%;
 }
 
 /* Fallback bush styling with CSS if no image */
@@ -149,7 +118,7 @@ body {
   content: '';
   position: absolute;
   bottom: 0;
-  right: 10%;
+  left: 10%;
   width: 200px;
   height: 150px;
   background: radial-gradient(ellipse at center, rgba(80, 120, 60, 0) 0%, rgba(100, 140, 80, 0.3) 50%, transparent 80%);
@@ -160,7 +129,7 @@ body {
   content: '';
   position: absolute;
   bottom: 0;
-  right: 15%;
+  left: 15%;
   width: 150px;
   height: 120px;
   background: radial-gradient(ellipse at center, rgba(90, 130, 70, 0.35) 0%, rgba(110, 150, 90, 0.25) 50%, transparent 80%);
@@ -203,6 +172,57 @@ body {
   inset: 0;
   z-index: 10;
   transition: transform 0.3s ease-out;
+}
+
+/* Cafe Model - Smaller size for cafe scene */
+.cafe-model {
+  z-index: 5;
+  top: 20%;
+}
+
+.cafe-model canvas {
+  transform: scale(1.5, 1.5) !important;
+}
+
+/* =================== CAFE BACKGROUND LAYERS =================== */
+
+/* Cafe Background - Static backdrop */
+.cafe-background {
+  z-index: 1;
+  background-image: url('/cafe.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Chair Layer - Behind model */
+.chair-layer {
+  z-index: 4;
+  background-image: url('/chair.png');
+  background-size: 35%;
+  background-repeat: no-repeat;
+  background-position: center bottom -10%;
+}
+
+/* Table Layer - In front of model */
+.table-layer {
+  z-index: 8;
+  background-image: url('/table.png');
+  background-size: 55%;
+  background-repeat: no-repeat;
+  background-position: center bottom 0%;
+}
+
+.table-layer::after {
+  content: '';
+  position: absolute;
+  bottom: 15%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 80px;
+  background: radial-gradient(circle, rgba(216, 140, 160, 0.3) 0%, transparent 70%);
+  border-radius: 50%;
 }
 
 /* Chat Section */
@@ -283,6 +303,29 @@ body {
   font-size: 0.875rem;
   text-align: center;
   padding: 0 1.5rem;
+}
+
+/* Cafe Date Button */
+.cafe-date-btn {
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, var(--dusty-pink), var(--soft-berry));
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(231, 166, 179, 0.3);
+}
+
+.cafe-date-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(231, 166, 179, 0.4);
+}
+
+.cafe-date-btn:active {
+  transform: translateY(0);
 }
 
 .empty-chat p {
