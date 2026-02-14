@@ -17,7 +17,7 @@ Create a local env file and add your API keys:
 	```
 	ELEVENLABS_VOICE_ID=YOUR_VOICE_ID_HERE
 	```
-	If not set, defaults to Rachel (21m00Tcm4TlvDq8ikWAM). Find voice IDs at [ElevenLabs Voice Library](https://elevenlabs.io/voice-library).
+	If not set, defaults to Jessica (cgSgspJ2msm6clMCkdW9). Find voice IDs at [ElevenLabs Voice Library](https://elevenlabs.io/voice-library).
 
 **Note:** The chatbot will work without ElevenLabs API key, but text-to-speech will be disabled.
 
