@@ -66,6 +66,14 @@ const CONFIG = {
 };
 ```
 
+For development, create `.env.local` file inside `ctrl-hack-del` directory and add these API keys:
+
+```
+GEMINI_API_KEY=<your-gemini-api-key>
+ELEVENLABS_API_KEY=<your-elevenlabs-api-key>
+ELEVENLABS_VOICE_ID=<your-elevenlabs-voice-id>
+```
+
 ### 4. Run the Application
 
 Since this uses ES modules and external APIs, you need to run it through a local server:
