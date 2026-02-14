@@ -20,6 +20,29 @@ export default function Home() {
   const [currentEmotion, setCurrentEmotion] = useState("Normal");
   const [isThinking, setIsThinking] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [timeOfDay, setTimeOfDay] = useState("afternoon");
+
+  // Detect time of day
+  useEffect(() => {
+    const updateTimeOfDay = () => {
+      const hour = new Date().getHours();
+      
+      if (hour >= 5 && hour < 12) {
+        setTimeOfDay("morning");
+      } else if (hour >= 12 && hour < 17) {
+        setTimeOfDay("afternoon");
+      } else if (hour >= 17 && hour < 20) {
+        setTimeOfDay("evening");
+      } else {
+        setTimeOfDay("night");
+      }
+    };
+
+    updateTimeOfDay();
+    // Update every minute
+    const interval = setInterval(updateTimeOfDay, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -81,10 +104,7 @@ export default function Home() {
       <section className="model-section">
         {/* Sky Layer - Deepest */}
         <div 
-          className="parallax-layer sky-layer"
-          style={{
-            transform: `translateX(${mousePos.x * 5}px)`
-          }}
+          className={`parallax-layer sky-layer sky-${timeOfDay}`}
         />
         
         {/* Tree/Foliage Layer */}

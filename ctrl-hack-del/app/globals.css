@@ -56,24 +56,60 @@ body {
   inset: 0;
   transition: transform 0.3s ease-out;
   pointer-events: none;
+  overflow: visible;
 }
 /* Sky Layer - Deepest background with warm sunset */
 .sky-layer {
+  z-index: 1;
+  transition: background 1s ease-in-out;
+}
+
+/* Morning sky (5am - 12pm) */
+.sky-layer.sky-morning {
+  background: linear-gradient(to bottom, 
+    #FFE5B4 0%,
+    #FFDAB9 30%,
+    #FFE4E1 60%,
+    #FFF0F5 100%
+  ) !important;
+}
+
+/* Afternoon sky (12pm - 5pm) */
+.sky-layer.sky-afternoon {
   background: linear-gradient(to bottom, 
     #ffe5e5 0%, 
     #fff0f3 30%,
     #f9d6d8 60%,
     #f4c9cc 100%
-  );
-  z-index: 1;
+  ) !important;
+}
+
+/* Evening sky (5pm - 8pm) */
+.sky-layer.sky-evening {
+  background: linear-gradient(to bottom, 
+    #FFB6C1 0%,
+    #FFB5C5 30%,
+    #FF9AA2 60%,
+    #E29399 100%
+  ) !important;
+}
+
+/* Night sky (8pm - 5am) */
+.sky-layer.sky-night {
+  background: linear-gradient(to bottom, 
+    #4A4E69 0%,
+    #6B5B95 30%,
+    #957DAD 60%,
+    #D4A5A5 100%
+  ) !important;
 }
 /* Tree Layer - Foliage in background */
 .tree-layer {
   z-index: 5;
   background-image: url('/tree.png'); /* Replace with actual tree PNG */
-  background-size: 70%;
+  background-size: 65%;
   background-repeat: no-repeat;
-  background-position: left -10% bottom -5%;
+  background-position: left -3% bottom -5%;
 }
 
 /* Fallback tree styling with CSS if no image */
