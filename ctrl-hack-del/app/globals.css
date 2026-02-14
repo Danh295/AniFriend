@@ -42,6 +42,33 @@ body {
   position: relative;
 }
 
+.chat-back-button {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--light-mauve);
+  border-radius: 50%;
+  color: var(--warm-plum);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(92, 58, 74, 0.15);
+}
+
+.chat-back-button:hover {
+  background: white;
+  border-color: var(--dusty-pink);
+  transform: translateX(-3px);
+  box-shadow: 0 4px 12px rgba(92, 58, 74, 0.2);
+}
+
 /* Loading Screen */
 .loading-screen {
   position: fixed;
@@ -642,6 +669,7 @@ body {
 /* Landing Page Styles */
 .landing-container {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   width: 100vw;
@@ -697,8 +725,7 @@ body {
   justify-content: center;
   width: 100%;
   max-width: 1200px;
-  max-height: 100%;
-  gap: clamp(1rem, 2vh, 2rem);
+  gap: clamp(0.75rem, 2vh, 2rem);
   animation: fadeInUp 0.8s ease-out;
 }
 
@@ -749,9 +776,8 @@ body {
 }
 
 .model-selection-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: clamp(0.75rem, 1.5vw, 2rem);
   width: 100%;
   max-width: 900px;
@@ -759,8 +785,6 @@ body {
 
 .model-card {
   position: relative;
-  flex: 1 1 180px;
-  max-width: 280px;
   background: linear-gradient(135deg, var(--cream-rose) 0%, var(--pale-blush) 100%);
   border: 2px solid var(--light-mauve);
   border-radius: 1.5rem;
@@ -798,7 +822,7 @@ body {
 }
 
 .model-name {
-  font-size: clamp(1rem, 2vw, 1.75rem);
+  font-size: clamp(1.1rem, 2vw, 1.75rem);
   font-weight: 700;
   color: var(--warm-plum);
   text-align: center;
@@ -815,18 +839,18 @@ body {
 
 .model-card-hover {
   position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(to top, rgba(216, 140, 160, 0.45), rgba(216, 140, 160, 0.25));
-  opacity: 0;
-  transition: opacity 0.3s ease;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, var(--soft-berry), transparent);
+  padding: 1.5rem;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
   z-index: 3;
 }
 
 .model-card:hover .model-card-hover {
-  opacity: 1;
+  transform: translateY(0);
 }
 
 .model-card-hover span {
