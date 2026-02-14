@@ -37,6 +37,10 @@ export default function Home() {
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [affection, setAffection] = useState(40); // Affection level (0-100)
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   // Initial loading screen
   useEffect(() => {
@@ -114,6 +118,77 @@ export default function Home() {
       });
     } catch (error) {
       console.error("❌ Audio creation failed:", error);
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm',
+      });
+      
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        await transcribeAudio(audioBlob);
+        
+        // Stop all tracks to release the microphone
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error("Error accessing microphone:", error);
+      alert("Could not access microphone. Please ensure you've granted permission.");
+    }
+  };
+  
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+  
+  const transcribeAudio = async (audioBlob: Blob) => {
+    setIsTranscribing(true);
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob);
+      
+      const response = await fetch('/api/stt', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("STT API Error:", errorData);
+        throw new Error(errorData.error || 'Transcription failed');
+      }
+      
+      const data = await response.json();
+      console.log("Transcription result:", data);
+      if (data.text) {
+        setInput(data.text);
+      } else {
+        console.warn("No text in transcription response");
+      }
+    } catch (error) {
+      console.error("Transcription error:", error);
+      alert(`Failed to transcribe audio: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsTranscribing(false);
     }
   };
 
@@ -326,13 +401,22 @@ export default function Home() {
         {/* Input Area */}
         <div className="chat-input-area">
           <div className="input-wrapper">
+            <button 
+              onClick={isRecording ? stopRecording : startRecording}
+              disabled={isTranscribing || isThinking}
+              className={`mic-button ${isRecording ? 'recording' : ''}`}
+              title={isRecording ? "Stop recording" : "Start voice input"}
+            >
+              <Mic size={16} />
+            </button>
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder="Command..."
+              placeholder={isTranscribing ? "Transcribing..." : "Command..."}
               className="chat-input"
+              disabled={isRecording || isTranscribing}
             />
             <button onClick={handleSend} disabled={!input.trim() || isThinking} className="send-button">
               <Send size={16} />
