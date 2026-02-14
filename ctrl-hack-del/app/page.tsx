@@ -22,6 +22,21 @@ export default function Home() {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [timeOfDay, setTimeOfDay] = useState("afternoon");
   const [isCafeDate, setIsCafeDate] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Initial loading screen
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Loading screen when switching backgrounds
+  useEffect(() => {
+    if (isLoading) return; // Skip on initial load
+    setIsLoading(true);
+    const timer = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, [isCafeDate]);
 
   // Detect time of day
   useEffect(() => {
@@ -100,6 +115,12 @@ export default function Home() {
 
   return (
     <main className="chat-container">
+      {/* Loading Screen */}
+      {isLoading && (
+        <div className="loading-screen">
+          <p className="loading-text">loading simulation</p>
+        </div>
+      )}
       
       {/* LEFT COLUMN: ARISA MODEL WITH PARALLAX (65% Width) */}
       <section className="model-section">
