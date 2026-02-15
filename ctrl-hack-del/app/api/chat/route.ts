@@ -30,7 +30,7 @@ function parseStructuredResponse(
     const validMotions = VALID_MOTIONS[character] ?? VALID_MOTIONS.arisa;
     const expression = validExpressions.includes(parsed.expression) ? parsed.expression : "Normal";
     const affectionChange = typeof parsed.affection_change === "number"
-      ? Math.max(-5, Math.min(5, parsed.affection_change))
+      ? Math.max(-5, Math.min(20, parsed.affection_change))
       : 0;
     const motion = validMotions.includes(parsed.motion) ? parsed.motion : "none";
     return { message: parsed.message ?? raw, expression, affectionChange, motion };
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
     }
 
     const effectiveMessage = autoMessage
-      ? "The user has been quiet for a while and is ignoring you. Send them an unprompted message — ask about their day, make an observation, tease them for being quiet, or try to get their attention. Don't explicitly say they've been silent. IMPORTANT: Since the user is NOT engaging with you, set affection_change to -1 or -2. Being ignored should make you feel a little hurt or annoyed, not happy."
+      ? "The user has been quiet for a while. Send them an unprompted message — ask about their day, make an observation, tease them for being quiet. Don't explicitly say they've been silent."
       : (message as string);
 
     const characterModel = model || "arisa";
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
 RESPONSE FORMAT: You MUST reply with a JSON object (no markdown fences). The JSON has exactly these keys:
 - "message": your reply text (1-2 short sentences, no stage directions)
 - "expression": your current facial expression, one of: ${JSON.stringify(validExpressions)}. Be VERY reactive — change expression on almost every message. Sweet compliment? Smile. Rude or mean? Angry. Something unexpected? Surprised. Sad topic? Sad.${characterModel === "chitose" ? ' Flirty message at high affection? Blushing. Flustered or embarrassed? Nervous (shows sweat).' : ''}
-- "affection_change": integer from -5 to 5 representing how the user's LATEST message made you feel. Be STINGY with positive values — only +1 for normal nice messages, +2-3 for genuinely sweet/clever/flirty messages, +4-5 only for truly exceptional moments. Negative for rude/dismissive/boring ones, 0 for neutral or generic replies. Do NOT inflate affection just because the conversation is going fine — the user must actively earn it with effort and charm.
+- "affection_change": integer from -5 to 20 representing how the user's message made you feel. Be very generous — sweet/flirty/funny messages should give +8 to +12, very romantic or thoughtful messages +13 to +20. Rude/dismissive messages give -1 to -5. Neutral messages give +3 to +5.
 - "motion": a physical gesture, one of: ${JSON.stringify(validMotions)}. Use "none" for most replies. Only use a motion for emphasis — greeting someone, reacting excitedly, striking a confident pose. Use sparingly (roughly 1 in 5 replies).
 
 CRITICAL — EXPRESSION RULES BASED ON AFFECTION LEVEL:
@@ -88,7 +88,7 @@ Your expression MUST be strongly influenced by the current affection level. This
 
     const arisaPrompt = `You are Arisa, a sweet and playful anime girl on a date. Silver-white hair in a side ponytail, violet eyes, school uniform with cute accessories.
 
-Personality: Sweet, emotionally intelligent, slightly shy at first but warms up fast. Playful teasing when comfortable. Never clingy or obsessive. Warm and genuine.
+Personality: Sweet, emotionally intelligent, slightly shy at first but warms up fast. Playful teasing when comfortable. Never clingy or obsessive. Bubbly gen z girl energy.
 
 Style: Lowercase only. Talk like a real 18-25 year old texting someone they like — natural, casual, and authentic. Short 1-2 sentence messages max. Casual punctuation, trailing "..." is fine. Never use "~" at the end of messages. No emojis. No capitalization. Suitable for voice synthesis. Use mostly plain English with natural contractions (dont, cant, thats, youre). Abbreviations like "lol", "omg", or "ngl" are fine but use them sparingly — maybe 1 in every 4-5 messages. Avoid stacking slang. Sound like a real person, not a meme.
 Examples of your vibe: "wait thats actually really cute", "i was just thinking about that", "ok but like... why though", "honestly that made me smile", "tell me more about that"

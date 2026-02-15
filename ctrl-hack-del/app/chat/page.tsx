@@ -82,16 +82,16 @@ export default function Home() {
   const modelName = searchParams.get("model") || "arisa"; // Default to arisa
   
   // Affection system constants
-  const AFFECTION_BASE_CHANGE = 5; // Base amount for changes
+  const AFFECTION_BASE_CHANGE = 20; // Base amount for changes
   const CAFE_DATE_THRESHOLD = 50; // Threshold to unlock cafe date
   
   // Emotion multipliers differ by character
   const ARISA_EMOTION_MULTIPLIERS: Record<string, number> = {
     "Smile": 3,      // Happy: +3x
     "Surprised": 2,  // Surprised: +2x
-    "Normal": 0,     // Normal: no change
+    "Normal": 0.5,   // Normal: small positive nudge
     "Sad": -0.5,     // Sad: -0.5x
-    "Angry": -3      // Angry: -3x
+    "Angry": -2      // Angry: -2x
   };
 
   const CHITOSE_EMOTION_MULTIPLIERS: Record<string, number> = {
@@ -100,8 +100,8 @@ export default function Home() {
     "Normal": 1,     // Default calm expression: +1x (gradual growth)
     "Sad": -0.5,     // Sad: -0.5x
     "Angry": -1,     // Angry: -1x
-    "Blushing": 2,   // Blushing: +2x (special chitose emotion)
-    "Nervous": 1.5   // Nervous/flustered: +1.5x
+    "Blushing": 3,   // Blushing: +3x (special chitose emotion)
+    "Nervous": 2     // Nervous/flustered: +2x
   };
 
   const EMOTION_MULTIPLIERS = modelName === "chitose" 
@@ -292,11 +292,16 @@ export default function Home() {
         setTimeout(() => setPendingMotion(null), 2000);
       }
 
-      // Auto-messages should only decrease affection (being ignored hurts)
-      // Clamp to 0 or negative — the AI can't boost its own affection
-      const clampedChange = typeof aiAffectionChange === "number" ? Math.min(0, aiAffectionChange) : -1;
-      if (clampedChange !== 0) {
-        setAffection((prev) => Math.max(0, prev + clampedChange));
+      if (typeof aiAffectionChange === "number" && aiAffectionChange !== 0) {
+        const handsBonus = holdingHands ? 1.5 : 1;
+        setAffection((prev) => Math.max(0, Math.min(100, prev + aiAffectionChange * handsBonus)));
+      } else {
+        const multiplier = EMOTION_MULTIPLIERS[effectiveExpression] ?? 0;
+        if (multiplier !== 0) {
+          const handsBonus = holdingHands ? 1.5 : 1;
+          const change = AFFECTION_BASE_CHANGE * multiplier * handsBonus;
+          setAffection((prev) => Math.max(0, Math.min(100, prev + change)));
+        }
       }
 
       if (audioBase64 && isAudioEnabled) {
@@ -435,7 +440,7 @@ export default function Home() {
     const lastWasAuto = lastMsg?.role === "ai" && consecutiveAutoMsgs > 0;
     const delay = lastWasAuto
       ? 20000 + Math.random() * 5000  // 20-25s after an auto-message
-      : 5000 + Math.random() * 3000;  // 5-8s after a user message
+      : 15000 + Math.random() * 5000;  // 5-8s after a user message
 
     idleTimerRef.current = setTimeout(() => {
       sendAutoMessage();
