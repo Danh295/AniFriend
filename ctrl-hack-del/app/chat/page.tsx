@@ -161,7 +161,7 @@ export default function Home() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: messageText, history: historyForApi, model: modelName, affection }),
+        body: JSON.stringify({ message: messageText, history: historyForApi, model: modelName, affection, holdingHands }),
       });
 
       const data = await res.json();
@@ -516,6 +516,7 @@ export default function Home() {
             )}
           </>
         )}
+        <div className={`warmth-vignette ${holdingHands ? "active" : ""}`} />
       </section>
 
       {/* AFFECTION METER */}

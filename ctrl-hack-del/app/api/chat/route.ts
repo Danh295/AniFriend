@@ -76,11 +76,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const { message, history, model, affection } = (await req.json()) as {
+    const { message, history, model, affection, holdingHands } = (await req.json()) as {
       message?: string;
       history?: ChatHistoryItem[];
       model?: string;
       affection?: number;
+      holdingHands?: boolean;
     };
 
     if (!message || typeof message !== "string") {
@@ -189,8 +190,15 @@ Create slow-burn emotional intimacy through calm presence, subtle warmth, and me
       currentAffection >= 25 ? " You are becoming friends. Be warmer and more personal. Start showing genuine interest in the user." :
       " You are still strangers. Be polite but slightly reserved."
     }`;
+    const holdingHandsContext = holdingHands
+      ? `\n\n[HOLDING HANDS] You are currently holding hands with the user. Guidelines:
+- Occasionally reference the physical sensation — warmth, a gentle squeeze, heartbeat quickening.
+- You may bring up more intimate topics: whispered confessions, shared dreams, secrets, quiet romantic observations.
+- Your tone can be softer, more vulnerable, and more openly affectionate than usual.
+- Do NOT overdo it — not every reply needs to mention hands. Keep it subtle and natural.`
+      : "";
     const basePrompt = characterModel === "chitose" ? chitosePrompt : arisaPrompt;
-    const systemInstruction = basePrompt + affectionContext;
+    const systemInstruction = basePrompt + affectionContext + holdingHandsContext;
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const geminiModel = genAI.getGenerativeModel({ 
