@@ -11,25 +11,21 @@ A web-based dating simulator featuring an interactive Live2D character that conv
 - **Dynamic Expressions** - Emotional states (Happy, Angry, Shy) triggered automatically by AI sentiment analysis.
 - 🎨 **Modern UI** - Responsive chat interface built with Next.js and Tailwind CSS.
 
-## How It Works
-
-1. **User Input**: The user sends a text message via the chat interface.
-2. **AI Processing (The Brain)**: The request is sent to the **Gemini API**, which generates a text reply and determines the character's emotional state (e.g., "Smile" or "Surprised").
-3. **Voice Generation (The Voice)**: The AI's reply is sent to **ElevenLabs**, which returns a realistic audio stream.
-4. **Audio Analysis**: The frontend plays the audio and uses the **Web Audio API** to analyze the volume (amplitude) in real-time.
-5. **Physics Calculation**: The **Live2D Cubism SDK** calculates the new geometry of the face mesh based on the volume data (updating the `ParamMouthOpenY` parameter).
-6. **Rendering**: **PixiJS** takes the updated mesh data and renders the warped texture to the HTML5 Canvas at 60 FPS.
-
 ## Browser Compatibility
 
 - Chrome/Edge: ✅ Full support
 - Firefox: ✅ Full support  
 - Safari: ✅ Full support (requires user interaction to enable audio context)
 
-## Credits
+## System Architecture
 
-- **PixiJS** for WebGL rendering
-- **Live2D Cubism SDK** for character physics and animation
-- **Google Gemini** for AI conversation and sentiment analysis
-- **ElevenLabs** for neural voice synthesis
-- **Lucide React** for UI icons
+Below is a high-level overview of the application's data flow, showing how user input is processed by the AI backend and rendered into a synchronized audiovisual experience by the graphics engine in the browser.
+
+![System Architecture Pipeline](./public/diagrams/pipeline.png)
+
+The pipeline can be broken down into four main stages:
+
+1.  **User Interaction**: The user sends a message through the **Chat UI** (React/Next.js frontend).
+2.  **Backend Processing**: The application sends the conversation context to **Google Gemini** to generate a reply. This text is then passed to **ElevenLabs** to create a corresponding audio stream.
+3.  **Graphics Pipeline**: The frontend receives the audio and plays it. The **Web Audio API** analyzes the sound's volume in real-time, feeding this data into the **Live2D Cubism SDK** to calculate mouth movements.
+4.  **Rendering**: The **PixiJS** renderer takes the updated mesh geometry from the SDK and draws the animated frame to the user's screen at 60 FPS, creating a seamless lip-synced performance.
