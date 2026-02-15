@@ -688,9 +688,12 @@ export default function Home() {
       {showMenu && (
         <div className="menu-overlay" onClick={() => setShowMenu(false)}>
           <div className="menu-panel" onClick={(e) => e.stopPropagation()}>
-            {/* Banner header */}
-            <div className="menu-banner">
-              <img src="/menu/menupage.png" alt="Our Menu" />
+            {/* Order header */}
+            <div className="menu-header">
+              <div className="menu-header-text">
+                <h2 className="menu-title">Place an Order</h2>
+                <p className="menu-subtitle">Pick a drink and a treat for your date</p>
+              </div>
               <button className="menu-close" onClick={() => setShowMenu(false)}>✕</button>
             </div>
 
