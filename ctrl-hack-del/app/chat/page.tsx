@@ -26,9 +26,9 @@ interface MenuItem {
 
 const MENU_ITEMS: MenuItem[] = [
   // Coffee
-  { name: "Cappuccino", price: 7, image: "/menu/coffee.png", category: "Coffee", description: "Rich espresso topped with velvety steamed milk foam" },
-  { name: "Latte", price: 8, image: "/menu/latte.png", category: "Coffee", description: "Smooth espresso blended with creamy steamed milk" },
-  { name: "Black Coffee", price: 4, image: "/menu/plain_latte.png", category: "Coffee", description: "A classic brew to warm the heart" },
+  { name: "Cappuccino", price: 7, image: "/menu/latte.png", category: "Coffee", description: "Rich espresso topped with velvety steamed milk foam" },
+  { name: "Latte", price: 8, image: "/menu/plain_latte.png", category: "Coffee", description: "Smooth espresso blended with creamy steamed milk" },
+  { name: "Black Coffee", price: 4, image: "/menu/coffee.png", category: "Coffee", description: "A classic brew to warm the heart" },
   // Tea
   { name: "Tea", price: 4, image: "/menu/tea.png", category: "Tea", description: "Delicate loose-leaf tea, steeped to perfection" },
   { name: "Matcha Latte", price: 7, image: "/menu/matcha_latte.png", category: "Tea", description: "Ceremonial-grade matcha whisked with frothy milk" },
