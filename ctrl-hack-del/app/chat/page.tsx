@@ -292,11 +292,16 @@ export default function Home() {
         setTimeout(() => setPendingMotion(null), 2000);
       }
 
-      // Auto-messages should only decrease affection (being ignored hurts)
-      // Clamp to 0 or negative — the AI can't boost its own affection
-      const clampedChange = typeof aiAffectionChange === "number" ? Math.min(0, aiAffectionChange) : -1;
-      if (clampedChange !== 0) {
-        setAffection((prev) => Math.max(0, prev + clampedChange));
+      if (typeof aiAffectionChange === "number" && aiAffectionChange !== 0) {
+        const handsBonus = holdingHands ? 1.5 : 1;
+        setAffection((prev) => Math.max(0, Math.min(100, prev + aiAffectionChange * handsBonus)));
+      } else {
+        const multiplier = EMOTION_MULTIPLIERS[effectiveExpression] ?? 0;
+        if (multiplier !== 0) {
+          const handsBonus = holdingHands ? 1.5 : 1;
+          const change = AFFECTION_BASE_CHANGE * multiplier * handsBonus;
+          setAffection((prev) => Math.max(0, Math.min(100, prev + change)));
+        }
       }
 
       if (audioBase64 && isAudioEnabled) {
@@ -421,21 +426,12 @@ export default function Home() {
   }, []);
 
   // Idle detection: auto-message after silence
-  // - 5-8s after a user message
-  // - 20s after an auto-message (wait for user to reply)
-  // - Suppressed entirely while the user is typing
-  const isUserTyping = input.trim().length > 0;
 
   useEffect(() => {
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-    if (isThinking || isLoading || showMenu || consecutiveAutoMsgs >= 3 || isUserTyping) return;
+    if (isThinking || isLoading || showMenu || consecutiveAutoMsgs >= 3 ) return;
 
-    // If the last message was from the AI (auto-message streak), use a longer delay
-    const lastMsg = chatHistory[chatHistory.length - 1];
-    const lastWasAuto = lastMsg?.role === "ai" && consecutiveAutoMsgs > 0;
-    const delay = lastWasAuto
-      ? 20000 + Math.random() * 5000  // 20-25s after an auto-message
-      : 5000 + Math.random() * 3000;  // 5-8s after a user message
+    const delay = 999999999;
 
     idleTimerRef.current = setTimeout(() => {
       sendAutoMessage();
@@ -444,7 +440,7 @@ export default function Home() {
     return () => {
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     };
-  }, [chatHistory, isThinking, isLoading, showMenu, consecutiveAutoMsgs, isUserTyping]);
+  }, [chatHistory, isThinking, isLoading, showMenu, consecutiveAutoMsgs]);
 
   // Auto-scroll to bottom on new messages or thinking
   useEffect(() => {
