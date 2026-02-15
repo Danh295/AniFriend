@@ -2,32 +2,34 @@
 import { useEffect, useRef, useState } from 'react';
 import * as PIXI from 'pixi.js';
 
-// Expose PIXI to window immediately
 if (typeof window !== "undefined") {
   (window as any).PIXI = PIXI;
 }
 
 interface ModelCanvasProps {
   emotion: string;
-  model?: string; // "arisa" or "asuka"
+  model: string;
+  audioSrc?: string | null;
 }
 
-export default function ModelCanvas({ emotion, model = "arisa" }: ModelCanvasProps) {
+export default function ModelCanvas({ emotion, model: modelName, audioSrc }: ModelCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const modelRef = useRef<any>(null);
+  const appRef = useRef<PIXI.Application | null>(null);
+  
+  const [status, setStatus] = useState("INITIALIZING...");
+
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const audioElRef = useRef<HTMLAudioElement | null>(null);
+  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
-    let app: PIXI.Application | null = null;
 
-    // --- HELPER: Manually load a script tag ---
     const loadScript = (src: string) => {
       return new Promise((resolve, reject) => {
-        // Check if already loaded
-        if (document.querySelector(`script[src="${src}"]`)) {
-          resolve(true);
-          return;
-        }
+        if (document.querySelector(`script[src="${src}"]`)) return resolve(true);
         const script = document.createElement("script");
         script.src = src;
         script.onload = () => resolve(true);
@@ -38,96 +40,140 @@ export default function ModelCanvas({ emotion, model = "arisa" }: ModelCanvasPro
 
     const init = async () => {
       try {
-        // 1. LOAD BOTH RUNTIMES
-        await loadScript("/live2d.min.js");
+        setStatus("LOADING ENGINES...");
+        await loadScript("/live2d.min.js"); 
         await loadScript("https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js");
+        
+        await new Promise(r => setTimeout(r, 100));
 
-        // 2. Import the library
+        setStatus("LOADING PIXI BRIDGE...");
         const { Live2DModel } = await import('pixi-live2d-display');
 
-        // 3. Start Pixi
-        app = new PIXI.Application({
+        setStatus("STARTING RENDERER...");
+        const app = new PIXI.Application({
           view: canvasRef.current!,
           autoStart: true,
           resizeTo: canvasRef.current!.parentElement as HTMLElement,
-          transparent: true,
-          antialias: true,
+          backgroundAlpha: 0,
+        });
+        appRef.current = app;
+
+        const modelFolder = modelName === "asuka" ? "asuka" : "01arisa";
+        const modelFile = modelName === "asuka" ? "asuka.model3.json" : "arisa_t11.model3.json";
+        const modelPath = `/models/${modelFolder}/${modelFile}`;
+
+        const model = await Live2DModel.from(modelPath);
+
+        app.stage.addChild(model as unknown as PIXI.DisplayObject);
+        modelRef.current = model;
+
+        const scaleX = (canvasRef.current!.width * 0.45) / model.width;
+        const scaleY = (canvasRef.current!.height * 0.85) / model.height;
+        const scale = Math.min(scaleX, scaleY);
+        model.scale.set(scale);
+        model.x = canvasRef.current!.width / 2;
+        model.y = canvasRef.current!.height / 2;
+        model.anchor.set(0.5, 0.5);
+
+        app.ticker.add(() => {
+            if (!modelRef.current || !analyserRef.current) return;
+    
+            const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+            analyserRef.current.getByteFrequencyData(dataArray);
+    
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                sum += dataArray[i];
+            }
+            const average = sum / dataArray.length;
+    
+            const mouthValue = Math.min((average / 255) * 5, 1.0);
+    
+            const core = modelRef.current.internalModel.coreModel;
+            core.setParameterValueById('ParamMouthOpenY', mouthValue);
+            core.setParameterValueById('ParamMouthOpen', mouthValue);
         });
 
-        // 4. Load Model
-        const modelPath = model === "asuka" 
-          ? "/models/asuka/Asuka.model3.json"
-          : "/models/01arisa/arisa_t11.model3.json";
-        const loadedModel = await Live2DModel.from(modelPath);
-
-        app.stage.addChild(loadedModel as unknown as PIXI.DisplayObject);
-        modelRef.current = loadedModel;
-
-        // Scale & Position Logic
-        const scaleX = (canvasRef.current!.width * 0.7) / loadedModel.width;
-        const scaleY = (canvasRef.current!.height * 1.2) / loadedModel.height;
-        const scale = Math.min(scaleX, scaleY);
-
-        loadedModel.scale.set(scale);
-        loadedModel.x = canvasRef.current!.width / 2;
-        loadedModel.y = canvasRef.current!.height / 3 * 2;
-        loadedModel.anchor.set(0.5, 0.5);
-
-        loadedModel.motion('Idle');
-
-        // For Asuka, toggle the coat off permanently
-        if (model === "asuka" && loadedModel.expression) {
-          loadedModel.expression('coat toggle');
-        }
-
+        setStatus(""); 
       } catch (e) {
-        console.error(e);
+        setStatus("ERROR");
       }
     };
 
     init();
 
     return () => {
-      if (app) app.destroy(true);
+      if (appRef.current) appRef.current.destroy(true);
     };
-  }, [model]); // Re-run when model changes
+  }, [modelName]);
 
-  // Emotion Switcher - Use actual expression file names
   useEffect(() => {
     if (modelRef.current && emotion) {
-      try {
-        // Map emotions to expression files based on model
-        const arisaExpressions: Record<string, string> = {
-          'Angry': 'Angry',
-          'Sad': 'Sad',
-          'Smile': 'Smile',
-          'Surprised': 'Surprised',
-          'Normal': 'Normal'
-        };
-
-        const asukaExpressions: Record<string, string> = {
-          'Angry': 'Gloom',
-          'Sad': 'Gloom',
-          'Smile': 'Happy',
-          'Surprised': 'Happy'
-        };
-        
-        const expressionFiles = model === "asuka" ? asukaExpressions : arisaExpressions;
-        const expName = expressionFiles[emotion];
-        
-        // Only set expression if it exists in the mapping
-        // For Asuka's "Normal", we skip setting expression to use the base model state
-        if (expName && modelRef.current.expression) {
-          modelRef.current.expression(expName);
-        }
-      } catch (e) {
-        console.error('Failed to set expression:', e);
+      const expressionMap: Record<string, string> = {
+        'Happy': 'f01', 'Smile': 'f01',
+        'Angry': 'f03', 'Sad': 'f04',
+        'Surprised': 'f02', 'Normal': 'f00',
+        'Shy': 'f02'
+      };
+      const expId = expressionMap[emotion] || 'f01';
+      if (modelRef.current.expression) {
+        modelRef.current.expression(expId);
       }
     }
-  }, [emotion, model]);
+  }, [emotion]);
+
+  useEffect(() => {
+    if (!audioSrc) return;
+
+    if (sourceNodeRef.current) {
+        sourceNodeRef.current.disconnect();
+    }
+    if (audioElRef.current) {
+        audioElRef.current.pause();
+        audioElRef.current.src = "";
+    }
+
+    if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    const ctx = audioContextRef.current;
+
+    if (!analyserRef.current) {
+        analyserRef.current = ctx.createAnalyser();
+        analyserRef.current.fftSize = 256;
+    }
+
+    const audio = new Audio(audioSrc);
+    audio.crossOrigin = "anonymous";
+    audioElRef.current = audio;
+
+    const source = ctx.createMediaElementSource(audio);
+    sourceNodeRef.current = source;
+    source.connect(analyserRef.current);
+    analyserRef.current.connect(ctx.destination);
+
+    const playAudio = async () => {
+        try {
+            if (ctx.state === 'suspended') {
+                await ctx.resume();
+            }
+            await audio.play();
+        } catch (e) {
+            // Audio play failed
+        }
+    };
+
+    playAudio();
+
+  }, [audioSrc]);
 
   return (
     <div className="w-full h-full relative flex items-center justify-center">
+      {status && (
+        <div className="absolute text-cyan-400 font-mono text-xs bg-black/80 px-2 py-1 rounded z-50 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+          {status}
+        </div>
+      )}
       <canvas ref={canvasRef} className="w-full h-full" />
     </div>
   );
